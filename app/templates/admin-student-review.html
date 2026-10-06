@@ -1,0 +1,76 @@
+{% extends "authenticated-base.html" %}
+{% block title %}{{ student.first_name }} {{ student.last_name }} · MyAdvisor{% endblock %}
+
+{% block additional_styles %}
+.review-shell { max-width: 72rem; }
+.plan-block { border: 1px solid #d7e2eb; border-radius: var(--brand-radius); background: var(--brand-surface); margin-bottom: 1rem; }
+.plan-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 1rem 1.1rem; border-bottom: 1px solid #e7edf3; }
+.course-row { display: grid; grid-template-columns: minmax(7rem, 0.8fr) minmax(12rem, 1.5fr) minmax(10rem, 1fr); gap: 1rem; padding: 0.9rem 1.1rem; border-bottom: 1px solid #edf1f4; }
+.course-row:last-child { border-bottom: 0; }
+.review-form { padding: 1rem 1.1rem; border-top: 1px solid #e7edf3; }
+.review-form textarea { min-height: 120px; }
+.review-actions { display: flex; gap: 0.75rem; margin-top: 0.9rem; }
+@media (max-width: 700px) { .course-row { grid-template-columns: 1fr; } .plan-header { flex-direction: column; align-items: flex-start; } }
+{% endblock %}
+
+{% block subpage_content %}
+<main class="container-fluid py-2 review-shell">
+  <nav class="mb-3 small text-muted">
+    <a href="{{ url_for('admin_home_view') }}" class="text-decoration-none">All faculties</a>
+    <span class="mx-2">/</span>
+    <a href="{{ url_for('admin_faculty_view', faculty_name=faculty_name) }}" class="text-decoration-none">{{ faculty_name }}</a>
+    <span class="mx-2">/</span>
+    <a href="{{ url_for('admin_degree_reviews_view', faculty_name=faculty_name, degree_id=degree.degree_id) }}" class="text-decoration-none">{{ degree.degree_name }}</a>
+    <span class="mx-2">/</span>
+    <span>{{ student.first_name }} {{ student.last_name }}</span>
+  </nav>
+
+  {% if advisor_notice %}<div class="alert {{ 'alert-danger' if advisor_notice == 'Semester denied.' else 'alert-success' }}" role="status">{{ advisor_notice }}</div>{% endif %}
+  {% if advisor_error %}<div class="alert alert-warning" role="alert">{{ advisor_error }}</div>{% endif %}
+
+  <header class="mb-3">
+    <p class="small fw-semibold text-uppercase mb-1" style="color: var(--brand-accent-2);">MyAdvisor</p>
+    <h1 class="h3 mb-1">{{ student.first_name }} {{ student.last_name }}</h1>
+    <p class="text-muted mb-0">{{ student.email }} · {{ degree.degree_name }}</p>
+  </header>
+
+  {% if semesters %}
+    {% for semester_group in semesters %}
+    <section class="plan-block">
+      <header class="plan-header">
+        <div>
+          <h2 class="h5 mb-1">{{ semester_group.semester.semester_name }} {{ semester_group.semester.semester_year }}</h2>
+          <p class="small text-muted mb-0">Pending approval</p>
+        </div>
+        <span class="badge text-bg-warning">Awaiting review</span>
+      </header>
+
+      <div class="course-list">
+        {% for course, selection in semester_group.courses %}
+        <div class="course-row">
+          <strong>{{ course.course_code }}</strong>
+          <span>{{ course.course_name }}</span>
+          <span class="text-muted small">{{ course.credits }} credits</span>
+        </div>
+        {% endfor %}
+      </div>
+
+      <form class="review-form" method="post" action="{{ url_for('advisor_decide_semester_action', student_id=student.student_id, semester_id=semester_group.semester.semester_id) }}">
+        <input type="hidden" name="redirect_to" value="{{ url_for('admin_student_review_view', faculty_name=faculty_name, degree_id=degree.degree_id, student_id=student.student_id) }}">
+        <label class="form-label fw-semibold" for="notes-{{ semester_group.semester.semester_id }}">Advisor notes</label>
+        <textarea id="notes-{{ semester_group.semester.semester_id }}" name="notes" class="form-control" placeholder="Add notes for the student when denying" maxlength="1000"></textarea>
+        <div class="review-actions">
+          <button class="btn btn-primary" type="submit" name="decision" value="approved">Approve</button>
+          <button class="btn btn-outline-danger" type="submit" name="decision" value="denied">Deny</button>
+        </div>
+      </form>
+    </section>
+    {% endfor %}
+  {% else %}
+  <div class="border rounded-2 bg-white p-4">
+    <h2 class="h5">No pending course plans</h2>
+    <p class="text-muted mb-0">This student has no pending semesters for this degree.</p>
+  </div>
+  {% endif %}
+</main>
+{% endblock %}

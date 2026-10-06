@@ -1,0 +1,74 @@
+{% extends "authenticated-base.html" %}
+{% block title %}Track degree · MyAdvisor{% endblock %}
+
+{% block additional_styles %}
+.degree-progress-header {
+  margin-bottom: 2rem;
+}
+
+.degree-progress-page {
+  text-align: center;
+}
+
+.degree-progress-type {
+  color: var(--brand-accent-2);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.degree-progress-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 22rem));
+  gap: 1rem;
+  justify-content: center;
+  margin-inline: auto;
+}
+
+.degree-progress-action {
+  display: flex;
+  min-height: 8rem;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  border: 1px solid #d7e2eb;
+  border-radius: var(--brand-radius);
+  background: var(--brand-surface);
+  color: var(--brand-ink);
+  text-decoration: none;
+}
+
+.degree-progress-action:hover,
+.degree-progress-action:focus-visible {
+  border-color: var(--brand-accent-2);
+  color: var(--brand-ink);
+}
+{% endblock %}
+
+{% block subpage_content %}
+<div class="container-fluid py-2 degree-progress-page">
+  <a class="auth-back" href="{{ url_for('degree_actions_view', degree_id=degree.degree_id) }}">&larr; {{ degree.degree_name }}</a>
+  <header class="degree-progress-header">
+    <p class="degree-progress-type mb-2">{{ program_type }}</p>
+    <h1 class="h3 mb-2">{{ degree.degree_name }}</h1>
+    <p class="text-muted mb-0">{{ degree.faculty_name }} &middot; {{ degree.total_credits_required }} credits required</p>
+  </header>
+
+  <div class="degree-progress-actions">
+    <a class="degree-progress-action" href="{{ url_for('completed_courses_view', degree_id=degree.degree_id) }}">
+      <span>
+        <span class="d-block h5 mb-1">Completed courses</span>
+        <span class="small text-muted">Review and add completed courses</span>
+      </span>
+      <span aria-hidden="true">&rarr;</span>
+    </a>
+    <a class="degree-progress-action" href="{{ url_for('remaining_courses_view', degree_id=degree.degree_id) }}">
+      <span>
+        <span class="d-block h5 mb-1">Remaining courses</span>
+        <span class="small text-muted">See the requirements still to complete</span>
+      </span>
+      <span aria-hidden="true">&rarr;</span>
+    </a>
+  </div>
+</div>
+{% endblock %}

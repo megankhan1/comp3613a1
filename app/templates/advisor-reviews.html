@@ -1,0 +1,84 @@
+{% extends "authenticated-base.html" %}
+{% block title %}Advisor reviews · MyAdvisor{% endblock %}
+
+{% block additional_styles %}
+.advisor-page { width: 100%; }
+.advisor-header { margin-bottom: 1.5rem; }
+.review-list { display: grid; gap: 1rem; max-width: 70rem; }
+.review-group { border: 1px solid #d7e2eb; border-radius: var(--brand-radius); background: var(--brand-surface); }
+.review-group-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; padding: 1rem 1.1rem; border-bottom: 1px solid #e4ebf0; }
+.review-course-list { display: grid; }
+.review-course { display: grid; grid-template-columns: minmax(8rem, 0.7fr) minmax(12rem, 1.2fr) minmax(12rem, 1fr); gap: 1rem; align-items: start; padding: 0.8rem 1.1rem; border-bottom: 1px solid #edf1f4; }
+.review-course:last-child { border-bottom: 0; }
+.review-course-code { font-weight: 700; }
+.review-note { color: var(--brand-muted); font-size: 0.86rem; }
+.review-actions { padding: 1rem 1.1rem; border-top: 1px solid #e4ebf0; }
+.review-actions textarea { max-width: 42rem; }
+.review-buttons { display: flex; gap: 0.65rem; margin-top: 0.8rem; }
+.review-empty { max-width: 70rem; padding: 1.25rem; border: 1px solid #d7e2eb; border-radius: var(--brand-radius); background: #fff; color: var(--brand-muted); }
+@media (max-width: 700px) {
+  .review-course { grid-template-columns: 1fr; gap: 0.3rem; }
+  .review-group-header { flex-direction: column; }
+}
+{% endblock %}
+
+{% block subpage_content %}
+<main class="container-fluid py-2 advisor-page">
+  <header class="advisor-header">
+    <p class="small fw-semibold text-uppercase mb-1" style="color: var(--brand-accent-2);">MyAdvisor</p>
+    <h1 class="h3 mb-1">Semester reviews</h1>
+    <p class="text-muted mb-0">Review submitted course plans by student and semester.</p>
+  </header>
+
+  {% if advisor_error %}<div class="alert alert-warning" role="alert">{{ advisor_error }}</div>{% endif %}
+  {% if advisor_notice %}<div class="alert alert-success" role="status">{{ advisor_notice }}</div>{% endif %}
+
+  {% if pending_reviews %}
+  <div class="review-list">
+    {% for review in pending_reviews %}
+    <section class="review-group">
+      <header class="review-group-header">
+        <div>
+          <h2 class="h5 mb-1">{{ review.student.first_name }} {{ review.student.last_name }}</h2>
+          <p class="text-muted small mb-0">{{ review.student.email }}</p>
+        </div>
+        <div class="text-md-end">
+          <p class="fw-semibold mb-1">{{ review.semester.semester_name }} {{ review.semester.semester_year }}</p>
+          <span class="badge text-bg-warning">Pending</span>
+        </div>
+      </header>
+
+      <div class="review-course-list">
+        {% for course, selection in review.courses %}
+        <article class="review-course">
+          <span class="review-course-code">{{ course.course_code }}</span>
+          <span>{{ course.course_name }} <span class="text-muted small">· {{ course.credits }} credits</span></span>
+          <span class="review-note">{{ selection.notes or "No note provided." }}</span>
+        </article>
+        {% endfor %}
+      </div>
+
+      <form class="review-actions" method="post" action="{{ url_for('advisor_decide_semester_action', student_id=review.student.student_id, semester_id=review.semester.semester_id) }}">
+        <label class="form-label fw-semibold" for="advisor-notes-{{ review.student.student_id }}-{{ review.semester.semester_id }}">Notes for the student</label>
+        <textarea class="form-control" id="advisor-notes-{{ review.student.student_id }}-{{ review.semester.semester_id }}" name="notes" rows="2" maxlength="1000" placeholder="Required when denying"></textarea>
+        <div class="review-buttons">
+          <button class="btn btn-primary" type="submit" name="decision" value="approved" data-review-decision="approved">Approve</button>
+          <button class="btn btn-outline-danger" type="submit" name="decision" value="denied" data-review-decision="denied">Deny</button>
+        </div>
+      </form>
+    </section>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="review-empty mb-0">No semester plans are waiting for review.</p>
+  {% endif %}
+</main>
+<script>
+  document.querySelectorAll("[data-review-decision]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const notes = button.closest("form").querySelector("textarea[name='notes']");
+      notes.required = button.dataset.reviewDecision === "denied";
+    });
+  });
+</script>
+{% endblock %}

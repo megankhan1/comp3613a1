@@ -1,0 +1,59 @@
+{% extends "authenticated-base.html" %}
+{% block title %}{{ degree.degree_name }} · MyAdvisor{% endblock %}
+
+{% block additional_styles %}
+.degree-actions-header {
+  margin-bottom: 2rem;
+}
+
+.degree-actions-page {
+  text-align: center;
+}
+
+.degree-actions-type {
+  color: var(--brand-accent-2);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.degree-actions-summary {
+  max-width: 48rem;
+  margin-inline: auto;
+  padding: 1.5rem 0;
+  border-top: 1px solid #d7e2eb;
+  border-bottom: 1px solid #d7e2eb;
+}
+
+.degree-actions-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.degree-actions-list .btn {
+  min-width: 10rem;
+}
+{% endblock %}
+
+{% block subpage_content %}
+<div class="container-fluid py-2 degree-actions-page">
+  <a class="auth-back" href="{{ url_for('user_home_view') }}">&larr; Your degrees</a>
+
+  <header class="degree-actions-header">
+    <p class="degree-actions-type mb-2">{{ program_type }}</p>
+    <h1 class="h3 mb-2">{{ degree.degree_name }}</h1>
+    <p class="text-muted mb-0">{{ degree.faculty_name }} <span aria-hidden="true">&middot;</span> {{ degree.total_credits_required }} credits required</p>
+  </header>
+
+  <section class="degree-actions-summary" aria-labelledby="degree-actions-title">
+    <h2 id="degree-actions-title" class="h5 mb-1">What would you like to do?</h2>
+    <div class="degree-actions-list">
+      <a class="btn btn-primary" href="{{ url_for('degree_progress_view', degree_id=degree.degree_id) }}">Track degree</a>
+      <a class="btn btn-outline-primary" href="{{ url_for('plan_semester_view', degree_id=degree.degree_id) }}">Plan semester</a>
+    </div>
+  </section>
+</div>
+{% endblock %}

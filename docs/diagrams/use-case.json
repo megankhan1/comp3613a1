@@ -1,0 +1,30 @@
+{
+  "system": "MyAdvisor",
+  "actors": [
+    {"name": "Students", "side": "left"},
+    {"name": "Admin/Advisor", "side": "right"}
+  ],
+  "use_cases": [
+    {
+      "name": "Track progress",
+      "actors": ["Students"],
+      "includes": ["Select degree"]
+    },
+    {"name": "Select degree"},
+    {
+      "name": "Add/remove courses for each semester",
+      "actors": ["Students"]
+    },
+    {
+      "name": "Seek approval",
+      "extends": ["Add/remove courses for each semester"],
+      "includes": ["Notify student"]
+    },
+    {
+      "name": "Approve/deny courses for each semester",
+      "actors": ["Admin/Advisor"],
+      "includes": ["Notify student"]
+    },
+    {"name": "Notify student"}
+  ]
+}

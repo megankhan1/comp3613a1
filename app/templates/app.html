@@ -1,9 +1,98 @@
 {% extends "authenticated-base.html" %}
-{% block title %}Home{% endblock %}
+{% block title %}My degrees · MyAdvisor{% endblock %}
+
+{% block additional_styles %}
+.degree-list-header {
+  margin-bottom: 1.5rem;
+}
+
+.degree-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 230px;
+  height: 100%;
+  padding: 1.25rem;
+  border: 1px solid #d7e2eb;
+  border-radius: var(--brand-radius);
+  background: var(--brand-surface);
+  color: var(--brand-ink);
+  text-align: left;
+  text-decoration: none;
+}
+
+.degree-card-link {
+  display: flex;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.degree-card-link:hover,
+.degree-card-link:focus-visible {
+  border-color: var(--brand-accent-2);
+  box-shadow: 0 8px 22px rgba(16, 38, 63, 0.08);
+  transform: translateY(-2px);
+  color: var(--brand-ink);
+}
+
+.degree-card-type {
+  color: var(--brand-accent-2);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.degree-card-meta {
+  color: var(--brand-muted);
+}
+
+.degree-card-open {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 1.25rem;
+  color: var(--brand-accent);
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .degree-card-link {
+    transition: none;
+  }
+
+  .degree-card-link:hover,
+  .degree-card-link:focus-visible {
+    transform: none;
+  }
+}
+{% endblock %}
 
 {% block subpage_content %}
 <div class="container-fluid py-2">
-  <h1 class="h4 mb-2">Home</h1>
-  <p class="text-muted mb-0">Workflow screens replace this shell in Phase 5 implement.</p>
+  <header class="degree-list-header">
+    <h1 class="h3 mb-2">Your degrees</h1>
+    <p class="text-muted mb-0">Your assigned majors and minors.</p>
+  </header>
+
+  {% if degree_cards %}
+  <div class="row g-3">
+    {% for degree, program_type in degree_cards %}
+    <div class="col-12 col-md-6 col-xl-4">
+      <a class="degree-card degree-card-link" href="{{ url_for('degree_actions_view', degree_id=degree.degree_id) }}"
+         aria-label="Open {{ degree.degree_name }} {{ program_type }} options">
+        <span class="degree-card-type mb-3">{{ program_type }}</span>
+        <span class="h5 mb-2">{{ degree.degree_name }}</span>
+        <span class="degree-card-meta mb-2">{{ degree.faculty_name }}</span>
+        <span class="degree-card-meta small">{{ degree.total_credits_required }} credits required</span>
+        <span class="degree-card-open"><span>Open degree</span><span aria-hidden="true">&rarr;</span></span>
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="border rounded-2 bg-white p-4">
+    <h2 class="h5">No assigned degrees yet</h2>
+    <p class="text-muted mb-0">Your assigned majors and minors will appear here.</p>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

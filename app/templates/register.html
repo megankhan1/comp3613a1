@@ -4,8 +4,8 @@
 {% block content %}
 <div class="auth-shell">
   <div class="auth-panel">
-    <a class="auth-back" href="{{ url_for('index_view') }}">← Home</a>
-    <div class="brand-wordmark">FastStarter</div>
+    <a class="auth-back" href="{{ url_for('index_view') }}">← MyAdvisor</a>
+    <div class="brand-wordmark">MyAdvisor</div>
     <p class="auth-tagline">Create an account</p>
 
     <form method="POST" action="{{ url_for('register_view') }}">
@@ -16,6 +16,22 @@
       <div class="mb-3">
         <label class="form-label" for="email">Email</label>
         <input class="form-control" type="email" id="email" name="email" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="first_name">First name</label>
+        <input class="form-control" type="text" id="first_name" name="first_name" required maxlength="100">
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="last_name">Last name</label>
+        <input class="form-control" type="text" id="last_name" name="last_name" required maxlength="100">
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="current_year">Current year of study</label>
+        <select class="form-select" id="current_year" name="current_year" required>
+          {% for year in range(1, 9) %}
+          <option value="{{ year }}">Year {{ year }}</option>
+          {% endfor %}
+        </select>
       </div>
       <div class="mb-3">
         <label class="form-label" for="password">Password</label>

@@ -1,0 +1,165 @@
+{% extends "authenticated-base.html" %}
+{% block title %}Remaining courses · MyAdvisor{% endblock %}
+
+{% block additional_styles %}
+.remaining-course-page { width: 100%; }
+.course-list-heading { margin-bottom: 1.5rem; }
+.course-year { margin: 1rem 0; border-top: 1px solid #d7e2eb; }
+.course-year-summary, .course-semester-summary {
+  padding: 0.85rem 0.25rem;
+  color: var(--brand-ink);
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+.course-year-summary::-webkit-details-marker,
+.course-semester-summary::-webkit-details-marker { display: none; }
+.course-year-summary::before, .course-semester-summary::before {
+  display: inline-block;
+  width: 1.25rem;
+  color: var(--brand-accent-2);
+  content: "+";
+}
+.course-year[open] > .course-year-summary::before,
+.course-semester[open] > .course-semester-summary::before { content: "-"; }
+.semester-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(14rem, 1fr));
+  gap: 1rem;
+  align-items: start;
+  overflow-x: auto;
+  padding: 0 0 1rem;
+}
+.course-semester {
+  min-width: 0;
+  border: 1px solid #d7e2eb;
+  border-radius: var(--brand-radius);
+  background: var(--brand-surface);
+}
+.course-semester.is-optional { border-style: dashed; }
+.course-semester-summary { padding: 0.8rem 0.9rem; }
+.course-semester-subtitle { display: block; margin: 0.2rem 0 0 1.25rem; color: var(--brand-muted); font-size: 0.75rem; font-weight: 400; }
+.course-semester-content { padding: 0 0.9rem 0.9rem; }
+.requirement-section { margin-top: 0.75rem; }
+.requirement-section-title { margin-bottom: 0.4rem; color: var(--brand-accent-2); font-size: 0.73rem; font-weight: 700; text-transform: uppercase; }
+.course-code-list { display: grid; gap: 0.35rem; }
+.course-code-link {
+  width: fit-content;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--brand-ink);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 0.16em;
+}
+.course-code-link:hover, .course-code-link:focus-visible { color: var(--brand-accent); text-decoration-color: currentColor; }
+.empty-semester { color: var(--brand-muted); font-size: 0.82rem; font-style: italic; }
+dialog.course-dialog {
+  width: min(34rem, calc(100% - 2rem));
+  max-height: min(85vh, 44rem);
+  padding: 1.5rem;
+  border: 1px solid #d7e2eb;
+  border-radius: var(--brand-radius);
+  color: var(--brand-ink);
+  box-shadow: 0 20px 60px rgba(16, 38, 63, 0.2);
+}
+dialog.course-dialog::backdrop { background: rgba(16, 38, 63, 0.42); }
+.dialog-heading { display: flex; justify-content: space-between; gap: 1rem; align-items: start; margin-bottom: 1.25rem; }
+@media (max-width: 767px) {
+  .semester-row { grid-template-columns: repeat(2, minmax(14rem, 78vw)); }
+  dialog.course-dialog { padding: 1.1rem; }
+}
+{% endblock %}
+
+{% block subpage_content %}
+<div class="container-fluid py-2 remaining-course-page">
+  <a class="auth-back" href="{{ url_for('degree_progress_view', degree_id=degree.degree_id) }}">&larr; {{ degree.degree_name }}</a>
+  <header class="course-list-heading">
+    <p class="small fw-semibold text-uppercase mb-1" style="color: var(--brand-accent-2);">{{ program_type }}</p>
+    <h1 class="h4 mb-1">{{ degree.degree_name }}</h1>
+    <h2 class="h6 mb-0">Remaining courses</h2>
+  </header>
+
+  {% for year_group in remaining_years %}
+  <details class="course-year" open>
+    <summary class="course-year-summary">Year {{ year_group.year_number }}</summary>
+    <div class="semester-row">
+      {% for semester_group in year_group.semesters %}
+      {% if semester_group.semester_number != 3 %}
+      <details class="course-semester {{ 'is-optional' if semester_group.is_optional else '' }}" open>
+        <summary class="course-semester-summary">
+          Semester {{ semester_group.semester_number }}
+          {% if semester_group.is_optional %}<span class="course-semester-subtitle">Optional</span>{% endif %}
+        </summary>
+        <div class="course-semester-content">
+          {% if semester_group.core_courses %}
+          <section class="requirement-section">
+            <h3 class="requirement-section-title">Core</h3>
+            <div class="course-code-list">
+              {% for item in semester_group.core_courses %}
+              {% set course = item.course %}
+              {% set requirement = item.requirement %}
+              <button class="course-code-link" type="button" data-dialog-open="remaining-core-{{ requirement.requirement_id }}">{{ course.course_code }}</button>
+              <dialog class="course-dialog" id="remaining-core-{{ requirement.requirement_id }}">
+                <div class="dialog-heading">
+                  <div><p class="small text-uppercase fw-semibold mb-1" style="color: var(--brand-accent-2);">Core · Year {{ requirement.expected_year }} · Semester {{ requirement.expected_semester }}</p><h2 class="h5 mb-0">{{ course.course_code }} · {{ course.course_name }}</h2></div>
+                  <button class="btn-close" type="button" data-dialog-close aria-label="Close"></button>
+                </div>
+                <p class="mb-2">{{ course.description or "No course description provided." }}</p>
+                <p class="small text-muted mb-0">{{ course.credits }} credits</p>
+              </dialog>
+              {% endfor %}
+            </div>
+          </section>
+          {% endif %}
+
+          {% if semester_group.elective_courses %}
+          <section class="requirement-section">
+            <h3 class="requirement-section-title">Electives</h3>
+            <div class="course-code-list">
+              {% for item in semester_group.elective_courses %}
+              {% set course = item.course %}
+              {% set requirement = item.requirement %}
+              <button class="course-code-link" type="button" data-dialog-open="remaining-elective-{{ requirement.requirement_id }}">{{ course.course_code }}</button>
+              <dialog class="course-dialog" id="remaining-elective-{{ requirement.requirement_id }}">
+                <div class="dialog-heading">
+                  <div><p class="small text-uppercase fw-semibold mb-1" style="color: var(--brand-accent-2);">Elective · Year {{ requirement.expected_year }} · Semester {{ requirement.expected_semester }}</p><h2 class="h5 mb-0">{{ course.course_code }} · {{ course.course_name }}</h2></div>
+                  <button class="btn-close" type="button" data-dialog-close aria-label="Close"></button>
+                </div>
+                <p class="mb-2">{{ course.description or "No course description provided." }}</p>
+                <p class="small text-muted mb-0">{{ course.credits }} credits</p>
+              </dialog>
+              {% endfor %}
+            </div>
+          </section>
+          {% endif %}
+
+          {% if not semester_group.core_courses and not semester_group.elective_courses %}
+          <p class="empty-semester mb-0">No remaining courses</p>
+          {% endif %}
+        </div>
+      </details>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </details>
+  {% else %}
+  <p class="empty-semester">No remaining courses for this degree.</p>
+  {% endfor %}
+</div>
+<script>
+  document.querySelectorAll("[data-dialog-open]").forEach((button) => {
+    button.addEventListener("click", () => document.getElementById(button.dataset.dialogOpen).showModal());
+  });
+  document.querySelectorAll("[data-dialog-close]").forEach((button) => {
+    button.addEventListener("click", () => button.closest("dialog").close());
+  });
+  document.querySelectorAll("dialog.course-dialog").forEach((dialog) => {
+    dialog.addEventListener("click", (event) => { if (event.target === dialog) dialog.close(); });
+  });
+</script>
+{% endblock %}

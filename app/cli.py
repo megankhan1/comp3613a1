@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from datetime import date
 from pathlib import Path
 
 
@@ -47,12 +48,17 @@ def cmd_init(args: argparse.Namespace) -> None:
 
 
 def cmd_seed(args: argparse.Namespace) -> None:
-    """Insert demo users.
+    """Insert demo users and a sample student degree profile.
 
     bob / bobpass       (regular_user)
     admin / adminpass   (admin)
     """
     from app.database import ensure_db_and_tables, get_cli_session
+    from app.models.course import Advisor, Course, DegreeRequirement, Semester
+    from app.models.course_selection import CourseSelection
+    from app.models.degree import Degree, StudentDegree
+    from app.models.student import Student
+    from sqlmodel import select
     from app.repositories.user import UserRepository
     from app.schemas.user import AdminCreate, RegularUserCreate
     from app.utilities.security import encrypt_password
@@ -85,6 +91,338 @@ def cmd_seed(args: argparse.Namespace) -> None:
             )
             print(f"  create {username} ({role})")
             created += 1
+
+        admin_user = repo.get_by_username("admin")
+        if admin_user:
+            advisor = session.exec(
+                select(Advisor).where(Advisor.user_id == admin_user.id)
+            ).one_or_none()
+            if advisor is None:
+                session.add(
+                    Advisor(
+                        user_id=admin_user.id,
+                        first_name="Admin",
+                        last_name="Advisor",
+                        email=admin_user.email,
+                    )
+                )
+                session.commit()
+                print("  create Advisor profile for admin")
+
+        demo_student_user = repo.get_by_username("bob")
+        if demo_student_user:
+            student = session.exec(
+                select(Student).where(Student.user_id == demo_student_user.id)
+            ).one_or_none()
+            if student is None:
+                student = Student(
+                    user_id=demo_student_user.id,
+                    first_name="Bob",
+                    last_name="Student",
+                    email=demo_student_user.email,
+                )
+                session.add(student)
+                session.commit()
+                session.refresh(student)
+                print("  create Student profile for bob")
+
+            assignments = session.exec(
+                select(StudentDegree).where(StudentDegree.student_id == student.student_id)
+            ).all()
+            if not assignments:
+                demo_degrees = [
+                    ("Computer Science (Special)", "Faculty of Science", 120, 3, "Major"),
+                    ("Mathematics", "Faculty of Science", 90, 2, "Minor"),
+                ]
+                for degree_name, faculty_name, credits, expected_years, program_type in demo_degrees:
+                    degree = session.exec(
+                        select(Degree).where(Degree.degree_name == degree_name)
+                    ).one_or_none()
+                    if degree is None:
+                        degree = Degree(
+                            degree_name=degree_name,
+                            faculty_name=faculty_name,
+                            total_credits_required=credits,
+                            expected_years=expected_years,
+                        )
+                        session.add(degree)
+                        session.commit()
+                        session.refresh(degree)
+
+                    session.add(
+                        StudentDegree(
+                            student_id=student.student_id,
+                            degree_id=degree.degree_id,
+                            program_type=program_type,
+                        )
+                    )
+                    degree.expected_years = expected_years
+                    session.add(degree)
+                session.commit()
+                print("  create demo Major and Minor degree assignments for bob")
+
+            major = session.exec(
+                select(Degree).where(Degree.degree_name == "Computer Science (Special)")
+            ).one()
+            minor = session.exec(
+                select(Degree).where(Degree.degree_name == "Mathematics")
+            ).one()
+            major.expected_years = 3
+            minor.expected_years = 2
+            session.add(major)
+            session.add(minor)
+            demo_courses = [
+                ("CSCI110", "Introduction to Computing", "Programming foundations", 3, major, "Core", "C", 1, 1),
+                ("CSCI210", "Data Structures", "Core data structures", 3, major, "Core", "C", 1, 2),
+                ("CSCI220", "Algorithms", "Algorithm design and analysis", 3, major, "Core", "C", 2, 1),
+                ("CSCI230", "Database Systems", "Relational database fundamentals", 3, major, "Elective", "C", 2, 2),
+                ("CSCI240", "Operating Systems", "Processes, memory, and scheduling", 3, major, "Core", "C", 3, 1),
+                ("CSCI250", "Computer Networks", "Network protocols and architecture", 3, major, "Elective", "C", 3, 2),
+                ("MATH101", "Calculus I", "Differential calculus", 3, minor, "Core", "C", 1, 1),
+                ("MATH201", "Linear Algebra", "Vectors and matrices", 3, minor, "Core", "C", 1, 2),
+                ("MATH220", "Discrete Mathematics", "Logic and discrete structures", 3, minor, "Elective", "C", 2, 1),
+            ]
+            for code, name, description, credits, degree, requirement_type, minimum_grade, expected_year, expected_semester in demo_courses:
+                course = session.get(Course, code)
+                if course is None:
+                    course = Course(
+                        course_code=code,
+                        course_name=name,
+                        description=description,
+                        credits=credits,
+                    )
+                    session.add(course)
+                    session.flush()
+
+                requirement = session.exec(
+                    select(DegreeRequirement).where(
+                        DegreeRequirement.degree_id == degree.degree_id,
+                        DegreeRequirement.course_code == code,
+                    )
+                ).first()
+                if requirement is None:
+                    session.add(
+                        DegreeRequirement(
+                            degree_id=degree.degree_id,
+                            course_code=code,
+                            requirement_type=requirement_type,
+                            minimum_grade=minimum_grade,
+                            expected_year=expected_year,
+                            expected_semester=expected_semester,
+                        )
+                    )
+                else:
+                    requirement.requirement_type = requirement_type
+                    requirement.expected_year = expected_year
+                    requirement.expected_semester = expected_semester
+                    session.add(requirement)
+
+            uwi_catalog = [
+                (
+                    "BSc Computer Science",
+                    "Faculty of Science and Technology",
+                    90,
+                    3,
+                    [
+                        ("COMP1600", "Introduction to Computer Science", "Problem solving and programming fundamentals", 3, "Core", 1, 1),
+                        ("COMP1601", "Computer Programming I", "Programming concepts and software development", 3, "Core", 1, 2),
+                        ("COMP2603", "Data Structures and Algorithms", "Data structures, algorithms, and complexity", 3, "Core", 2, 1),
+                        ("COMP2611", "Database Systems", "Relational database design and SQL", 3, "Core", 2, 2),
+                        ("COMP3613", "Software Engineering", "Software lifecycle, requirements, and testing", 3, "Core", 3, 1),
+                    ],
+                ),
+                (
+                    "BSc Information Technology",
+                    "Faculty of Science and Technology",
+                    90,
+                    3,
+                    [
+                        ("INFO1600", "Information Technology Fundamentals", "Information systems and digital technologies", 3, "Core", 1, 1),
+                        ("INFO1601", "Web Development", "Client-side and server-side web development", 3, "Core", 1, 2),
+                        ("INFO2602", "Systems Analysis and Design", "Analysis and design of information systems", 3, "Core", 2, 1),
+                        ("INFO2605", "Network Administration", "Network services, administration, and security", 3, "Core", 2, 2),
+                    ],
+                ),
+                (
+                    "BSc Mathematics",
+                    "Faculty of Science and Technology",
+                    90,
+                    3,
+                    [
+                        ("MATH1140", "Calculus I", "Differential and integral calculus", 3, "Core", 1, 1),
+                        ("MATH1150", "Linear Algebra", "Vectors, matrices, and linear transformations", 3, "Core", 1, 2),
+                        ("MATH2110", "Differential Equations", "First and higher-order differential equations", 3, "Core", 2, 1),
+                        ("MATH2210", "Probability and Statistics", "Probability models and statistical methods", 3, "Core", 2, 2),
+                    ],
+                ),
+                (
+                    "BSc Economics",
+                    "Faculty of Social Sciences",
+                    90,
+                    3,
+                    [
+                        ("ECON1001", "Principles of Economics I", "Foundations of microeconomic analysis", 3, "Core", 1, 1),
+                        ("ECON1002", "Principles of Economics II", "Foundations of macroeconomic analysis", 3, "Core", 1, 2),
+                        ("ECON2001", "Intermediate Microeconomics", "Consumer, producer, and market theory", 3, "Core", 2, 1),
+                        ("ECON2002", "Intermediate Macroeconomics", "National income, growth, and policy", 3, "Core", 2, 2),
+                    ],
+                ),
+                (
+                    "BSc Management Studies",
+                    "Faculty of Social Sciences",
+                    90,
+                    3,
+                    [
+                        ("MGMT1000", "Introduction to Management", "Principles of management and organizations", 3, "Core", 1, 1),
+                        ("MGMT1001", "Business Communication", "Professional communication in business", 3, "Core", 1, 2),
+                        ("MGMT2004", "Organizational Behaviour", "People, teams, and organizations", 3, "Core", 2, 1),
+                        ("MGMT2010", "Operations Management", "Processes, capacity, and quality management", 3, "Core", 2, 2),
+                    ],
+                ),
+                (
+                    "BA Psychology",
+                    "Faculty of Social Sciences",
+                    90,
+                    3,
+                    [
+                        ("PSYC1000", "Introduction to Psychology", "Foundations of psychological science", 3, "Core", 1, 1),
+                        ("PSYC1001", "Research Methods in Psychology", "Research design and psychological measurement", 3, "Core", 1, 2),
+                        ("PSYC2000", "Developmental Psychology", "Human development across the lifespan", 3, "Core", 2, 1),
+                        ("PSYC2001", "Social Psychology", "Social influence, groups, and relationships", 3, "Core", 2, 2),
+                    ],
+                ),
+                (
+                    "BSc Civil Engineering",
+                    "Faculty of Engineering",
+                    90,
+                    3,
+                    [
+                        ("ENGR1000", "Engineering Mathematics I", "Mathematical methods for engineering", 3, "Core", 1, 1),
+                        ("ENGR1001", "Engineering Drawing", "Technical drawing and computer-aided design", 3, "Core", 1, 2),
+                        ("CIVL2000", "Structural Mechanics", "Statics, strength, and structural analysis", 3, "Core", 2, 1),
+                        ("CIVL2001", "Construction Materials", "Properties and applications of construction materials", 3, "Core", 2, 2),
+                    ],
+                ),
+                (
+                    "BSc Nursing",
+                    "Faculty of Medical Sciences",
+                    90,
+                    3,
+                    [
+                        ("NURS1000", "Foundations of Nursing", "Professional nursing practice and patient care", 3, "Core", 1, 1),
+                        ("NURS1001", "Human Anatomy and Physiology", "Structure and function of the human body", 3, "Core", 1, 2),
+                        ("NURS2000", "Adult Health Nursing", "Nursing care for adult health conditions", 3, "Core", 2, 1),
+                        ("NURS2001", "Community Health Nursing", "Population health and community nursing", 3, "Core", 2, 2),
+                    ],
+                ),
+            ]
+            for degree_name, faculty_name, credits, expected_years, catalog_courses in uwi_catalog:
+                degree = session.exec(
+                    select(Degree).where(Degree.degree_name == degree_name)
+                ).one_or_none()
+                if degree is None:
+                    degree = Degree(
+                        degree_name=degree_name,
+                        faculty_name=faculty_name,
+                        total_credits_required=credits,
+                        expected_years=expected_years,
+                    )
+                    session.add(degree)
+                    session.flush()
+                else:
+                    degree.faculty_name = faculty_name
+                    degree.total_credits_required = credits
+                    degree.expected_years = expected_years
+                    session.add(degree)
+
+                for code, name, description, course_credits, requirement_type, expected_year, expected_semester in catalog_courses:
+                    course = session.get(Course, code)
+                    if course is None:
+                        course = Course(
+                            course_code=code,
+                            course_name=name,
+                            description=description,
+                            credits=course_credits,
+                        )
+                        session.add(course)
+                        session.flush()
+
+                    requirement = session.exec(
+                        select(DegreeRequirement).where(
+                            DegreeRequirement.degree_id == degree.degree_id,
+                            DegreeRequirement.course_code == code,
+                        )
+                    ).first()
+                    if requirement is None:
+                        session.add(
+                            DegreeRequirement(
+                                degree_id=degree.degree_id,
+                                course_code=code,
+                                requirement_type=requirement_type,
+                                minimum_grade="C",
+                                expected_year=expected_year,
+                                expected_semester=expected_semester,
+                            )
+                        )
+                    else:
+                        requirement.expected_year = expected_year
+                        requirement.expected_semester = expected_semester
+                        session.add(requirement)
+            session.commit()
+
+            fall_2025 = session.exec(
+                select(Semester).where(
+                    Semester.semester_name == "Fall",
+                    Semester.semester_year == 2025,
+                )
+            ).first()
+            if fall_2025 is None:
+                fall_2025 = Semester(
+                    semester_name="Fall",
+                    semester_year=2025,
+                    start_date=date(2025, 9, 1),
+                    end_date=date(2025, 12, 20),
+                )
+                session.add(fall_2025)
+                session.flush()
+
+            completed_record = session.exec(
+                select(CourseSelection).where(
+                    CourseSelection.student_id == student.student_id,
+                    CourseSelection.course_code == "CSCI110",
+                    CourseSelection.semester_id == fall_2025.semester_id,
+                    CourseSelection.status == "completed",
+                )
+            ).first()
+            if completed_record is None:
+                session.add(
+                    CourseSelection(
+                        student_id=student.student_id,
+                        course_code="CSCI110",
+                        semester_id=fall_2025.semester_id,
+                        status="completed",
+                    )
+                )
+
+            pending_record = session.exec(
+                select(CourseSelection).where(
+                    CourseSelection.student_id == student.student_id,
+                    CourseSelection.course_code == "CSCI210",
+                    CourseSelection.semester_id == fall_2025.semester_id,
+                    CourseSelection.status == "pending",
+                )
+            ).first()
+            if pending_record is None:
+                session.add(
+                    CourseSelection(
+                        student_id=student.student_id,
+                        course_code="CSCI210",
+                        semester_id=fall_2025.semester_id,
+                        status="pending",
+                    )
+                )
+            session.commit()
+            print("  ensure sample degree requirements, one completed course, and one pending review for bob")
 
     print(f"Seed done — created {created}, skipped {skipped}.")
     print("Login with bob/bobpass or admin/adminpass")

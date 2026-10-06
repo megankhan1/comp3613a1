@@ -1,0 +1,242 @@
+{% extends "authenticated-base.html" %}
+{% block title %}Completed courses · MyAdvisor{% endblock %}
+
+{% block additional_styles %}
+.completed-course-page { width: 100%; }
+.course-list-heading { margin-bottom: 1.5rem; }
+.course-year { margin: 1rem 0; border-top: 1px solid #d7e2eb; }
+.course-year-summary {
+  padding: 0.85rem 0.25rem;
+  color: var(--brand-ink);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+.course-year-summary::-webkit-details-marker,
+.course-semester-summary::-webkit-details-marker { display: none; }
+.course-year-summary::before,
+.course-semester-summary::before {
+  display: inline-block;
+  width: 1.25rem;
+  color: var(--brand-accent-2);
+  content: "+";
+}
+.course-year[open] > .course-year-summary::before,
+.course-semester[open] > .course-semester-summary::before { content: "-"; }
+.semester-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(14rem, 1fr));
+  gap: 1rem;
+  align-items: start;
+  overflow-x: auto;
+  padding: 0 0 1rem;
+}
+.course-semester {
+  min-width: 0;
+  border: 1px solid #d7e2eb;
+  border-radius: var(--brand-radius);
+  background: var(--brand-surface);
+}
+.course-semester-summary {
+  padding: 0.8rem 0.9rem;
+  color: var(--brand-ink);
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+.course-semester-subtitle { display: block; margin: 0.2rem 0 0 1.25rem; color: var(--brand-muted); font-size: 0.75rem; font-weight: 400; }
+.course-semester-content { padding: 0 0.9rem 0.9rem; }
+.course-code-list { display: grid; gap: 0.35rem; margin: 0 0 0.8rem; }
+.course-code-link {
+  width: fit-content;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--brand-ink);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 0.16em;
+}
+.course-code-link:hover, .course-code-link:focus-visible { color: var(--brand-accent); text-decoration-color: currentColor; }
+.text-action {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--brand-accent);
+  font-size: 0.85rem;
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+}
+.semester-actions { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem; margin-top: 0.8rem; }
+.delete-semester-action { color: #a33a42; }
+.extra-semester-section { margin-top: 1.5rem; padding: 1.25rem 0; border-top: 1px solid #d7e2eb; }
+.semester-radio-list { display: grid; gap: 0.75rem; margin-top: 1rem; }
+.semester-radio-option { display: flex; align-items: center; gap: 0.6rem; }
+dialog.course-dialog {
+  width: min(34rem, calc(100% - 2rem));
+  max-height: min(85vh, 44rem);
+  padding: 1.5rem;
+  border: 1px solid #d7e2eb;
+  border-radius: var(--brand-radius);
+  color: var(--brand-ink);
+  box-shadow: 0 20px 60px rgba(16, 38, 63, 0.2);
+}
+dialog.course-dialog::backdrop { background: rgba(16, 38, 63, 0.42); }
+.dialog-heading { display: flex; justify-content: space-between; gap: 1rem; align-items: start; margin-bottom: 1.25rem; }
+.dialog-close { border: 0; background: transparent; color: var(--brand-muted); font-size: 1.4rem; line-height: 1; }
+.dialog-actions { display: flex; justify-content: space-between; gap: 0.75rem; margin-top: 1.5rem; }
+@media (max-width: 767px) {
+  .semester-row { grid-template-columns: repeat(3, minmax(14rem, 78vw)); }
+  dialog.course-dialog { padding: 1.1rem; }
+}
+{% endblock %}
+
+{% block subpage_content %}
+<div class="container-fluid py-2 completed-course-page">
+  <a class="auth-back" href="{{ url_for('degree_progress_view', degree_id=degree.degree_id) }}">&larr; {{ degree.degree_name }}</a>
+  <header class="course-list-heading">
+    <p class="small fw-semibold text-uppercase mb-1" style="color: var(--brand-accent-2);">{{ program_type }}</p>
+    <h1 class="h4 mb-1">{{ degree.degree_name }}</h1>
+    <h2 class="h6 mb-0">Completed courses</h2>
+  </header>
+
+  {% for year_group in semester_groups %}
+  <details class="course-year" open>
+    <summary class="course-year-summary">Year {{ year_group.year_number }}</summary>
+    <div class="semester-row">
+    {% for semester_group in year_group.semesters %}
+    {% set semester = semester_group.semester %}
+    <details class="course-semester" open>
+      <summary class="course-semester-summary">
+        Semester {{ semester_group.semester_number }}
+        <span class="course-semester-subtitle">{{ semester.semester_name }}</span>
+      </summary>
+      <div class="course-semester-content">
+      {% if semester_group.courses %}
+      <div class="course-code-list">
+        {% for course, selection in semester_group.courses %}
+        <button class="course-code-link" type="button" data-dialog-open="course-detail-{{ selection.selection_id }}">
+          {{ course.course_code }}
+        </button>
+
+        <dialog class="course-dialog" id="course-detail-{{ selection.selection_id }}">
+          <div class="dialog-heading">
+            <div>
+              <p class="small text-uppercase fw-semibold mb-1" style="color: var(--brand-accent-2);">{{ semester.semester_name }} {{ semester.semester_year }}</p>
+              <h2 class="h5 mb-0">{{ course.course_code }} · {{ course.course_name }}</h2>
+            </div>
+            <button class="dialog-close" type="button" data-dialog-close aria-label="Close">&times;</button>
+          </div>
+          <p class="mb-2">{{ course.description or "No course description provided." }}</p>
+          <p class="small text-muted mb-0">{{ course.credits }} credits</p>
+          <div class="dialog-actions">
+            <form method="post" action="{{ url_for('delete_completed_course_action', degree_id=degree.degree_id, selection_id=selection.selection_id) }}"
+                  onsubmit="return confirm('Remove this course from your completed history?')">
+              <button class="btn btn-outline-danger" type="submit">Delete</button>
+            </form>
+            <button class="btn btn-primary" type="button" data-dialog-close>Done</button>
+          </div>
+        </dialog>
+        {% endfor %}
+      </div>
+      {% endif %}
+      <div class="semester-actions">
+        <button class="text-action" type="button" data-dialog-open="add-course-{{ semester.semester_id }}">+ Add course</button>
+        <form method="post" action="{{ url_for('delete_completed_semester_action', degree_id=degree.degree_id, semester_id=semester.semester_id) }}"
+              onsubmit="return confirm('Delete this semester from your completed-course history? Your course entries for it will be removed.')">
+          <button class="text-action delete-semester-action" type="submit">Delete semester</button>
+        </form>
+      </div>
+      </div>
+    </details>
+
+      <dialog class="course-dialog" id="add-course-{{ semester.semester_id }}">
+        <div class="dialog-heading">
+          <div>
+            <p class="small text-uppercase fw-semibold mb-1" style="color: var(--brand-accent-2);">{{ semester.semester_name }} {{ semester.semester_year }}</p>
+            <h2 class="h5 mb-0">Add completed course</h2>
+          </div>
+          <button class="dialog-close" type="button" data-dialog-close aria-label="Close">&times;</button>
+        </div>
+        <form method="post" action="{{ url_for('add_completed_course_action', degree_id=degree.degree_id, semester_id=semester.semester_id) }}">
+          <div class="mb-3">
+            <label class="form-label" for="course-code-{{ semester.semester_id }}">Course code</label>
+            <input class="form-control" id="course-code-{{ semester.semester_id }}" name="course_code" required maxlength="30">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="course-name-{{ semester.semester_id }}">Course name</label>
+            <input class="form-control" id="course-name-{{ semester.semester_id }}" name="course_name" required maxlength="160">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="course-description-{{ semester.semester_id }}">Description</label>
+            <textarea class="form-control" id="course-description-{{ semester.semester_id }}" name="description" rows="3" maxlength="500"></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="course-credits-{{ semester.semester_id }}">Credits</label>
+            <input class="form-control" id="course-credits-{{ semester.semester_id }}" name="credits" type="number" min="1" required>
+          </div>
+          <div class="dialog-actions justify-content-end">
+            <button class="btn btn-outline-secondary" type="button" data-dialog-close>Cancel</button>
+            <button class="btn btn-primary" type="submit">Save course</button>
+          </div>
+        </form>
+      </dialog>
+    {% endfor %}
+    </div>
+  </details>
+  {% endfor %}
+
+  <section class="extra-semester-section" aria-label="Add another semester">
+    <button class="text-action" type="button" data-dialog-open="add-semester-dialog">+ Add extra semester</button>
+  </section>
+
+  <dialog class="course-dialog" id="add-semester-dialog">
+    <div class="dialog-heading">
+      <h2 class="h5 mb-0">Add extra semester</h2>
+      <button class="dialog-close" type="button" data-dialog-close aria-label="Close">&times;</button>
+    </div>
+    <form method="post" action="{{ url_for('add_completed_semester_action', degree_id=degree.degree_id) }}">
+      <div class="mb-3">
+        <label class="form-label" for="new-semester-year">Year</label>
+        <input class="form-control" id="new-semester-year" name="academic_year_label" type="text" pattern="Year [1-9][0-9]*" placeholder="Year 1" required>
+      </div>
+      <fieldset class="border-0 p-0 m-0">
+        <legend class="form-label">Semester</legend>
+        <div class="semester-radio-list">
+          {% for semester_number in [1, 2, 3] %}
+          <label class="semester-radio-option" for="semester-choice-{{ semester_number }}">
+            <input class="form-check-input mt-0" id="semester-choice-{{ semester_number }}" name="semester_number" type="radio" value="{{ semester_number }}" required>
+            <span>Semester {{ semester_number }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </fieldset>
+      <div class="dialog-actions justify-content-end">
+        <button class="btn btn-outline-secondary" type="button" data-dialog-close>Cancel</button>
+        <button class="btn btn-primary" type="submit">Add semester</button>
+      </div>
+    </form>
+  </dialog>
+</div>
+<script>
+  document.querySelectorAll("[data-dialog-open]").forEach((button) => {
+    button.addEventListener("click", () => {
+      document.getElementById(button.dataset.dialogOpen).showModal();
+    });
+  });
+
+  document.querySelectorAll("[data-dialog-close]").forEach((button) => {
+    button.addEventListener("click", () => button.closest("dialog").close());
+  });
+
+  document.querySelectorAll("dialog.course-dialog").forEach((dialog) => {
+    dialog.addEventListener("click", (event) => {
+      if (event.target === dialog) dialog.close();
+    });
+  });
+</script>
+{% endblock %}

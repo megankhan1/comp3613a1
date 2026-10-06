@@ -1,0 +1,34 @@
+@startuml
+!pragma layout smetana
+skinparam shadowing false
+skinparam actorBorderColor #1B365D
+skinparam actorFontColor #1E232D
+skinparam usecaseBackgroundColor #FFFFFF
+skinparam usecaseBorderColor #1B365D
+skinparam usecaseFontColor #1E232D
+skinparam rectangleBorderColor #1B365D
+skinparam rectangleBackgroundColor #F8FAFC
+skinparam arrowColor #1B365D
+
+actor "Students" as Students
+
+rectangle "MyAdvisor" {
+  usecase "Track progress" as Track_progress
+  usecase "Select degree" as Select_degree
+  usecase "Add/remove courses for each semester" as Add_remove_courses_for_each_semester
+  usecase "Seek approval" as Seek_approval
+  usecase "Approve/deny courses for each semester" as Approve_deny_courses_for_each_semester
+  usecase "Notify student" as Notify_student
+}
+
+actor "Admin/Advisor" as Admin_Advisor
+
+Students --> Track_progress
+Track_progress ..> Select_degree : <<include>>
+Students --> Add_remove_courses_for_each_semester
+Seek_approval ..> Notify_student : <<include>>
+Seek_approval ..> Add_remove_courses_for_each_semester : <<extend>>
+Approve_deny_courses_for_each_semester <-- Admin_Advisor
+Approve_deny_courses_for_each_semester ..> Notify_student : <<include>>
+
+@enduml

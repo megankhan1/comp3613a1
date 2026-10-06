@@ -1,0 +1,59 @@
+{% extends "authenticated-base.html" %}
+{% block title %}Plan semester · {{ degree.degree_name }}{% endblock %}
+
+{% block additional_styles %}
+.plan-picker-page { width: 100%; }
+.plan-picker-header { margin-bottom: 1.5rem; }
+.plan-semester-options { display: grid; grid-template-columns: repeat(3, minmax(13rem, 1fr)); gap: 1rem; max-width: 62rem; margin: 1.5rem auto 0; justify-content: center; }
+.plan-semester-option {
+  display: flex;
+  min-height: 5rem;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 1.25rem;
+  border: 1px solid #d7e2eb;
+  border-radius: var(--brand-radius);
+  background: var(--brand-surface);
+  color: var(--brand-ink);
+  text-decoration: none;
+}
+.plan-semester-option:hover, .plan-semester-option:focus-visible { border-color: var(--brand-accent-2); color: var(--brand-ink); }
+.plan-semester-option.is-pending { border-color: #e2be63; background: #fffaf0; color: #684b00; }
+@media (max-width: 767px) { .plan-semester-options { grid-template-columns: 1fr; } }
+{% endblock %}
+
+{% block subpage_content %}
+<div class="container-fluid py-2 plan-picker-page">
+  <a class="auth-back" href="{{ url_for('degree_actions_view', degree_id=degree.degree_id) }}">&larr; {{ degree.degree_name }}</a>
+  <header class="plan-picker-header">
+    <p class="small fw-semibold text-uppercase mb-1" style="color: var(--brand-accent-2);">{{ program_type }}</p>
+    <h1 class="h3 mb-1">Plan semester</h1>
+    <p class="text-muted mb-0">Choose a semester to view or update its courses.</p>
+  </header>
+
+  <h2 class="h5 mt-4 mb-0">Current year: Year {{ current_year_number }}</h2>
+  <p class="text-muted small mb-0">Choose a semester to plan.</p>
+  <div class="plan-semester-options">
+    {% for slot in current_year.semesters %}
+    <a class="plan-semester-option {{ 'is-pending' if slot.status == 'pending' else '' }}"
+       href="{{ url_for('plan_semester_detail_view', degree_id=degree.degree_id, academic_year_number=current_year_number, semester_number=slot.semester_number) }}">
+      <span class="fw-semibold">Semester {{ slot.semester_number }}</span>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% if toast %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const toastElement = document.getElementById("appToast");
+    const toastHeader = toastElement.querySelector(".toast-header");
+    toastElement.classList.remove("text-bg-warning", "text-bg-success");
+    toastElement.classList.add({{ ('text-bg-warning' if toast.variant == 'warning' else 'text-bg-success')|tojson }});
+    document.getElementById("toastTitle").textContent = {{ ('Needs attention' if toast.variant == 'warning' else 'Saved')|tojson }};
+    document.getElementById("toastContent").textContent = {{ toast.message|tojson }};
+    toastHeader.classList.add("border-0");
+    new bootstrap.Toast(toastElement).show();
+  });
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,171 @@
+{% extends "authenticated-base.html" %}
+{% block title %}Semester {{ slot.semester_number }} · {{ degree.degree_name }}{% endblock %}
+
+{% block additional_styles %}
+.plan-detail-page { width: 100%; }
+.plan-detail-header { margin-bottom: 1.5rem; }
+.plan-detail-status { display: inline-block; margin-top: 0.5rem; padding: 0.25rem 0.6rem; border-radius: 0.25rem; background: #fff1c2; color: #684b00; font-size: 0.78rem; font-weight: 700; }
+.plan-course-list { display: grid; gap: 0.65rem; max-width: 54rem; margin-inline: auto; }
+.plan-course-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.8rem 1rem; border: 1px solid #d7e2eb; border-radius: var(--brand-radius); background: var(--brand-surface); text-align: left; }
+.plan-course-code { font-weight: 700; }
+.plan-course-description { color: var(--brand-muted); font-size: 0.82rem; }
+.plan-menu-trigger { display: inline-flex; align-items: center; justify-content: center; width: 4.2rem; height: 4.2rem; flex: 0 0 4.2rem; border: 0; border-radius: 50%; background: transparent; color: #000; }
+.plan-menu-trigger .material-symbols-outlined { font-size: 3.6rem; font-variation-settings: "FILL" 1, "wght" 900, "GRAD" 0, "opsz" 48; }
+.plan-menu-trigger:hover, .plan-menu-trigger:focus-visible { background: #edf3f7; }
+.plan-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.7rem; margin: 1.5rem auto 0; }
+.plan-add-section { width: 100%; max-width: 54rem; margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid #d7e2eb; }
+.plan-add-trigger { margin-top: 1.5rem; }
+.plan-add-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.8rem 1rem; }
+.plan-add-form .wide-field { grid-column: 1 / -1; }
+.plan-add-form .form-label { font-size: 0.82rem; font-weight: 600; }
+.plan-empty { width: 100%; max-width: 54rem; padding: 1rem; border: 1px dashed #cbd7e1; border-radius: var(--brand-radius); color: var(--brand-muted); }
+dialog.plan-dialog { width: min(34rem, calc(100% - 2rem)); max-height: min(85vh, 44rem); padding: 1.4rem; border: 1px solid #d7e2eb; border-radius: var(--brand-radius); color: var(--brand-ink); box-shadow: 0 20px 60px rgba(16, 38, 63, 0.2); }
+dialog.plan-dialog::backdrop { background: rgba(16, 38, 63, 0.42); }
+.plan-dialog-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.plan-dialog-actions { display: flex; justify-content: space-between; gap: 0.7rem; margin-top: 1.25rem; }
+.plan-menu-options { display: grid; gap: 0.5rem; }
+.plan-menu-options form { margin: 0; }
+.plan-menu-options .btn { width: 100%; text-align: left; }
+@media (max-width: 575px) {
+  .plan-detail-page { padding-inline: 0.5rem; }
+  .plan-detail-header { margin-bottom: 1.25rem; }
+  .plan-course-row { flex-direction: column; align-items: stretch; gap: 0.5rem; padding: 0.85rem; }
+  .plan-course-row > div:first-child { width: 100%; }
+  .plan-menu-trigger { align-self: flex-end; width: 3.4rem; height: 3.4rem; flex-basis: 3.4rem; }
+  .plan-menu-trigger .material-symbols-outlined { font-size: 2.8rem; }
+  .plan-actions .btn,
+  .plan-add-trigger { width: 100%; }
+  .plan-add-form { grid-template-columns: 1fr; }
+  .plan-add-form .wide-field { grid-column: auto; }
+  dialog.plan-dialog { width: calc(100% - 1rem); padding: 1.1rem; }
+  .plan-dialog-heading { gap: 0.5rem; }
+}
+{% endblock %}
+
+{% block subpage_content %}
+<div class="container-fluid py-2 plan-detail-page">
+  <a class="auth-back" href="{{ url_for('plan_semester_view', degree_id=degree.degree_id) }}">&larr; Choose another semester</a>
+  <header class="plan-detail-header">
+    <p class="small fw-semibold text-uppercase mb-1" style="color: var(--brand-accent-2);">{{ program_type }} · Year {{ academic_year_number }}</p>
+    <h1 class="h3 mb-1">Semester {{ slot.semester_number }}</h1>
+    <p class="text-muted mb-0">{{ degree.degree_name }} · {{ slot.calendar_year }}</p>
+    {% if slot.status == 'pending' %}<span class="plan-detail-status">Pending advisor approval</span>{% elif slot.status == 'approved' %}<span class="badge text-bg-success mt-2">Approved</span>{% elif slot.status == 'denied' %}<span class="badge text-bg-danger mt-2">Denied · editing reopened</span>{% endif %}
+  </header>
+
+  {% if slot.courses %}
+  <div class="plan-course-list">
+    {% for course, selection in slot.courses %}
+    <article class="plan-course-row">
+      <div>
+        <div><span class="plan-course-code">{{ course.course_code }}</span> <span>{{ course.course_name }}</span></div>
+        {% if course.description %}<p class="plan-course-description mb-0">{{ course.description }}</p>{% endif %}
+        {% if selection.status == 'pending' %}<span class="plan-detail-status">Pending</span>{% elif selection.status == 'approved' %}<span class="badge text-bg-success mt-1">Approved</span>{% elif selection.status == 'denied' %}<span class="badge text-bg-danger mt-1">Denied</span>{% endif %}
+        {% if selection.status == 'denied' and selection.notes %}<p class="alert alert-warning small mt-2 mb-0">Advisor feedback: {{ selection.notes }}</p>{% endif %}
+      </div>
+      {% if slot.can_edit %}
+      <button class="plan-menu-trigger" type="button" data-dialog-open="course-menu-{{ selection.selection_id }}" title="Course options" aria-label="Options for {{ course.course_code }}">
+        <span class="material-symbols-outlined">more_vert</span>
+      </button>
+
+      <dialog class="plan-dialog" id="course-menu-{{ selection.selection_id }}">
+        <div class="plan-dialog-heading">
+          <div><p class="small text-uppercase fw-semibold mb-1" style="color: var(--brand-accent-2);">Course options</p><h2 class="h5 mb-0">{{ course.course_code }}</h2></div>
+          <button class="btn-close" type="button" data-dialog-close aria-label="Close"></button>
+        </div>
+        <div class="plan-menu-options">
+          <button class="btn btn-outline-primary" type="button" data-edit-dialog="course-edit-{{ selection.selection_id }}">Edit course</button>
+          <form method="post" action="{{ url_for('delete_planned_course_action', degree_id=degree.degree_id, academic_year_number=academic_year_number, semester_number=slot.semester_number, selection_id=selection.selection_id) }}" onsubmit="return confirm('Remove this course from the semester?')">
+            <button class="btn btn-outline-danger" type="submit">Remove course</button>
+          </form>
+        </div>
+      </dialog>
+
+      <dialog class="plan-dialog" id="course-edit-{{ selection.selection_id }}">
+        <div class="plan-dialog-heading">
+          <div><p class="small text-uppercase fw-semibold mb-1" style="color: var(--brand-accent-2);">Edit planned course</p><h2 class="h5 mb-0">{{ course.course_code }}</h2></div>
+          <button class="btn-close" type="button" data-dialog-close aria-label="Close"></button>
+        </div>
+        <form method="post" action="{{ url_for('edit_planned_course_action', degree_id=degree.degree_id, academic_year_number=academic_year_number, semester_number=slot.semester_number, selection_id=selection.selection_id) }}">
+          <label class="form-label" for="edit-code-{{ selection.selection_id }}">Course code</label>
+          <input class="form-control mb-3" id="edit-code-{{ selection.selection_id }}" name="course_code" value="{{ course.course_code }}" required maxlength="30">
+          <label class="form-label" for="edit-name-{{ selection.selection_id }}">Course name</label>
+          <input class="form-control mb-3" id="edit-name-{{ selection.selection_id }}" name="course_name" value="{{ course.course_name }}" required maxlength="160">
+          <label class="form-label" for="edit-description-{{ selection.selection_id }}">Description</label>
+          <textarea class="form-control mb-3" id="edit-description-{{ selection.selection_id }}" name="description" rows="3" maxlength="500">{{ course.description }}</textarea>
+          <label class="form-label" for="edit-credits-{{ selection.selection_id }}">Credits</label>
+          <input class="form-control" id="edit-credits-{{ selection.selection_id }}" name="credits" type="number" min="1" value="{{ course.credits }}" required>
+          <div class="plan-dialog-actions justify-content-end">
+            <button class="btn btn-outline-secondary" type="button" data-dialog-close>Cancel</button>
+            <button class="btn btn-primary" type="submit">Save changes</button>
+          </div>
+        </form>
+      </dialog>
+      {% endif %}
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="plan-empty">No courses planned for this semester yet.</p>
+  {% endif %}
+
+  {% if slot.status != 'pending' %}
+  <button class="btn btn-outline-primary plan-add-trigger" type="button" data-dialog-open="add-course-dialog">Add course</button>
+  <dialog class="plan-dialog" id="add-course-dialog" aria-labelledby="add-course-title">
+    <div class="plan-dialog-heading">
+      <div>
+        <p class="small text-uppercase fw-semibold mb-1" style="color: var(--brand-accent-2);">Year {{ academic_year_number }} · Semester {{ slot.semester_number }}</p>
+        <h2 id="add-course-title" class="h5 mb-0">Add course</h2>
+      </div>
+      <button class="btn-close" type="button" data-dialog-close aria-label="Close"></button>
+    </div>
+    <form class="plan-add-form" method="post" action="{{ url_for('add_planned_course_action', degree_id=degree.degree_id, academic_year_number=academic_year_number, semester_number=slot.semester_number) }}">
+      <div><label class="form-label" for="course-code">Course code</label><input class="form-control" id="course-code" name="course_code" required maxlength="30"></div>
+      <div><label class="form-label" for="course-name">Course name</label><input class="form-control" id="course-name" name="course_name" required maxlength="160"></div>
+      <div class="wide-field"><label class="form-label" for="course-description">Course description</label><textarea class="form-control" id="course-description" name="description" rows="3" maxlength="500"></textarea></div>
+      <div><label class="form-label" for="course-credits">Credits</label><input class="form-control" id="course-credits" name="credits" type="number" min="1" required></div>
+      <div class="wide-field plan-dialog-actions justify-content-end">
+        <button class="btn btn-outline-secondary" type="button" data-dialog-close>Cancel</button>
+        <button class="btn btn-primary" type="submit">Add course</button>
+      </div>
+    </form>
+  </dialog>
+    {% if slot.has_editable_courses %}
+    <form class="plan-actions" method="post" action="{{ url_for('submit_planned_semester_action', degree_id=degree.degree_id, academic_year_number=academic_year_number, semester_number=slot.semester_number) }}">
+      <button class="btn btn-primary" type="submit">Submit</button>
+    </form>
+    {% endif %}
+  {% endif %}
+</div>
+
+<script>
+  document.querySelectorAll("[data-dialog-open]").forEach((button) => {
+    button.addEventListener("click", () => document.getElementById(button.dataset.dialogOpen).showModal());
+  });
+  document.querySelectorAll("[data-dialog-close]").forEach((button) => {
+    button.addEventListener("click", () => button.closest("dialog").close());
+  });
+  document.querySelectorAll("[data-edit-dialog]").forEach((button) => {
+    button.addEventListener("click", () => {
+      button.closest("dialog").close();
+      document.getElementById(button.dataset.editDialog).showModal();
+    });
+  });
+  document.querySelectorAll("dialog.plan-dialog").forEach((dialog) => {
+    dialog.addEventListener("click", (event) => { if (event.target === dialog) dialog.close(); });
+  });
+</script>
+{% if toast %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const toastElement = document.getElementById("appToast");
+    const toastHeader = toastElement.querySelector(".toast-header");
+    toastElement.classList.remove("text-bg-warning", "text-bg-success");
+    toastElement.classList.add({{ ('text-bg-warning' if toast.variant == 'warning' else 'text-bg-success')|tojson }});
+    document.getElementById("toastTitle").textContent = {{ ('Needs attention' if toast.variant == 'warning' else 'Saved')|tojson }};
+    document.getElementById("toastContent").textContent = {{ toast.message|tojson }};
+    toastHeader.classList.add("border-0");
+    new bootstrap.Toast(toastElement).show();
+  });
+</script>
+{% endif %}
+{% endblock %}

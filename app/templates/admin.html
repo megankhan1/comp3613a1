@@ -1,9 +1,45 @@
 {% extends "authenticated-base.html" %}
-{% block title %}Admin{% endblock %}
+{% block title %}Faculty overview · MyAdvisor{% endblock %}
+
+{% block additional_styles %}
+.admin-landing { width: 100%; }
+.admin-header { margin-bottom: 1.5rem; }
+.faculty-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+.faculty-card { display: flex; flex-direction: column; min-height: 180px; padding: 1.3rem; border: 1px solid #d7e2eb; border-radius: var(--brand-radius); background: var(--brand-surface); color: var(--brand-ink); text-decoration: none; transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease; }
+.faculty-card:hover, .faculty-card:focus-visible { text-decoration: none; color: var(--brand-ink); border-color: var(--brand-accent-2); box-shadow: 0 8px 24px rgba(16, 38, 63, 0.08); transform: translateY(-2px); }
+.faculty-icon { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 12px; background: color-mix(in srgb, var(--brand-accent-2) 18%, white); color: var(--brand-accent-2); font-size: 1.4rem; margin-bottom: 1rem; }
+.search-box { max-width: 32rem; }
+{% endblock %}
 
 {% block subpage_content %}
-<div class="container-fluid py-2">
-  <h1 class="h4 mb-2">Admin</h1>
-  <p class="text-muted mb-0">Admin workflow screens replace this shell in Phase 5 implement.</p>
-</div>
+<main class="container-fluid py-2 admin-landing">
+  <header class="admin-header">
+    <p class="small fw-semibold text-uppercase mb-1" style="color: var(--brand-accent-2);">MyAdvisor</p>
+    <h1 class="h3 mb-1">Admissions & degree review</h1>
+    <p class="text-muted mb-0">Browse by faculty to review pending student submissions.</p>
+  </header>
+
+  <form method="get" class="search-box mb-4">
+    <label class="form-label fw-semibold" for="faculty-search">Search faculty</label>
+    <input id="faculty-search" class="form-control" type="search" name="q" value="{{ search_query }}" placeholder="Search by faculty name">
+  </form>
+
+  {% if faculties %}
+  <div class="faculty-grid">
+    {% for faculty in faculties %}
+    <a class="faculty-card" href="{{ url_for('admin_faculty_view', faculty_name=faculty) }}">
+      <span class="faculty-icon" aria-hidden="true">▣</span>
+      <span class="h5 mb-2">{{ faculty }}</span>
+      <span class="text-muted">View degrees and pending student reviews</span>
+      <span class="mt-auto pt-3 fw-semibold" style="color: var(--brand-accent);">Open faculty →</span>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="border rounded-2 bg-white p-4 mt-3">
+    <h2 class="h5">No faculties found</h2>
+    <p class="text-muted mb-0">No degree records are available for the current search.</p>
+  </div>
+  {% endif %}
+</main>
 {% endblock %}

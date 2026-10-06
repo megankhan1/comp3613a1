@@ -4,18 +4,24 @@
 <style>
     body {
         overflow-x: hidden;
-        background: #f4f6f8;
+        background: var(--brand-bg);
     }
 
     #wrapper {
         display: flex;
         min-height: 100vh;
+        align-items: flex-start;
     }
 
     #sidebar {
+        position: sticky;
+        top: 0;
         min-width: 250px;
         max-width: 250px;
-        min-height: 100vh;
+        height: 100vh;
+        flex: 0 0 250px;
+        align-self: flex-start;
+        overflow-y: auto;
         transition: all 0.3s;
         background: var(--brand-sidebar);
         color: #fff;
@@ -33,8 +39,8 @@
     #sidebar .nav-link:hover,
     #sidebar .nav-link.active {
         color: #fff;
-        background-color: color-mix(in srgb, var(--brand-accent) 55%, #000);
-        border-radius: 0.5rem;
+        background-color: color-mix(in srgb, var(--brand-accent-2) 32%, var(--brand-sidebar));
+        border-radius: var(--brand-radius);
     }
 
     #sidebar .brand-wordmark {
@@ -45,27 +51,89 @@
     }
 
     #content {
-        width: 100%;
+        width: auto;
+        min-width: 0;
+        min-height: 100vh;
+        flex: 1 1 auto;
         padding: 1rem;
         transition: all 0.3s;
         display: flex;
         flex-direction: column;
+        align-items: center;
+        text-align: center;
         background-color: #f4f6f8;
+    }
+
+    #content > .navbar,
+    #content > .row {
+        width: 100%;
+    }
+
+    #content > .navbar {
+        align-self: stretch;
+        text-align: left;
+    }
+
+    #content > main {
+        width: min(100%, 72rem);
+        margin-inline: auto;
+        text-align: center !important;
+    }
+
+    #content > main > * {
+        margin-inline: auto;
+    }
+
+    #content > main form {
+        margin-inline: auto;
+    }
+
+    #content > main .review-actions {
+        justify-content: center;
+    }
+
+    #content > main .course-row {
+        text-align: center;
+    }
+
+    #content > main .faculty-card,
+    #content > main .degree-card,
+    #content > main .student-card,
+    #content > main .plan-block {
+        text-align: center;
+    }
+
+    #content > main .student-card {
+        justify-content: center;
+    }
+
+    #content > main .student-card .text-end {
+        text-align: center !important;
     }
 
     .navbar {
         border-bottom: 1px solid #dee2e6;
     }
-</style>
 {% block additional_styles %}{% endblock %}
+</style>
 {% endblock %}
 
 {% block content %}
+{% set sidebar_degree_id = degree.degree_id if degree is defined else (degree_cards[0][0].degree_id if degree_cards is defined and degree_cards else none) %}
 <div id="wrapper">
     <nav id="sidebar" class="p-3 d-flex flex-column vh-100">
-        <div class="brand-wordmark">FastStarter</div>
+        <div class="brand-wordmark">MyAdvisor</div>
 
         <ul class="nav nav-pills flex-column gap-2 flex-grow-1">
+            {% if user.role == 'admin' %}
+            <li class="nav-item">
+                <a class="nav-link d-flex align-items-center {{ 'active' if request.url.path.startswith('/admin') }}"
+                   href="{{ url_for('admin_home_view') }}">
+                    <span class="material-symbols-outlined me-2">home</span>
+                    Home
+                </a>
+            </li>
+            {% else %}
             <li class="nav-item">
                 <a class="nav-link d-flex align-items-center {{ 'active' if request.url.path.startswith('/app') }}"
                    href="{{ url_for('user_home_view') }}">
@@ -73,6 +141,7 @@
                     Home
                 </a>
             </li>
+            {% endif %}
             <li class="nav-item mt-auto">
                 <a class="nav-link d-flex align-items-center text-danger" href="{{ url_for('logout') }}">
                     <span class="material-symbols-outlined me-2">logout</span>
@@ -83,12 +152,15 @@
     </nav>
 
     <div id="content">
-        <nav class="navbar navbar-expand-lg bg-white mb-4 px-3 rounded-3 shadow-sm">
+        <nav class="navbar navbar-expand-lg bg-white mb-4 px-3 rounded-2 shadow-sm">
             <button class="btn btn-outline-secondary" id="menu-toggle" type="button">
                 <span class="material-symbols-outlined md-dark">menu</span>
             </button>
-            <div class="ms-auto d-flex align-items-center gap-3">
-                <span class="fw-semibold">Welcome, {{ user.username }}</span>
+            <div class="ms-auto profile-menu">
+                <span class="profile-icon" title="{{ user.username }}" aria-label="Signed in as {{ user.username }}">
+                    <span class="material-symbols-outlined" aria-hidden="true">person</span>
+                </span>
+                <span class="profile-name">{{ user.username }}</span>
             </div>
         </nav>
 

@@ -4,6 +4,7 @@ import time
 from contextlib import contextmanager
 
 from sqlalchemy.exc import DBAPIError, OperationalError, ProgrammingError
+from sqlalchemy import inspect, text
 from sqlmodel import SQLModel, Session, create_engine
 
 from app.config import get_settings
@@ -38,6 +39,33 @@ def create_db_and_tables() -> None:
     import app.models  # noqa: F401
 
     SQLModel.metadata.create_all(engine)
+    migrations = {
+        "student": {
+            "current_year": "INTEGER NOT NULL DEFAULT 1",
+        },
+        "degree": {
+            "expected_years": "INTEGER NOT NULL DEFAULT 3",
+        },
+        "degreerequirement": {
+            "expected_year": "INTEGER NOT NULL DEFAULT 1",
+            "expected_semester": "INTEGER NOT NULL DEFAULT 1",
+        },
+        "advisor": {
+            "user_id": "INTEGER REFERENCES user(id)",
+        },
+    }
+    with engine.begin() as connection:
+        for table_name, columns in migrations.items():
+            existing_columns = {
+                column["name"] for column in inspect(connection).get_columns(table_name)
+            }
+            for column_name, column_definition in columns.items():
+                if column_name not in existing_columns:
+                    connection.execute(
+                        text(
+                            f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}"
+                        )
+                    )
 
 
 def drop_all() -> None:
