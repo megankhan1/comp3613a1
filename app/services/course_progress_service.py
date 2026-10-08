@@ -9,17 +9,20 @@ class CourseProgressService:
     def __init__(self, repository: CourseProgressRepository):
         self.repository = repository
 
-    def get_completed_courses(self, user_id: int):
-        semesters = self.repository.get_semesters(user_id)
-        completed_courses = self.repository.get_completed_courses(user_id)
+    def get_completed_courses(self, user_id: int, degree_id: int):
+        completed_courses = self.repository.get_completed_courses(user_id, degree_id)
         courses_by_semester = {}
+        semesters_by_id = {}
         for course, semester, selection in completed_courses:
             courses_by_semester.setdefault(semester.semester_id, []).append(
                 (course, selection)
             )
+            semesters_by_id[semester.semester_id] = semester
+        for semester in self.repository.get_empty_semesters():
+            semesters_by_id.setdefault(semester.semester_id, semester)
 
         semesters_by_year = {}
-        for semester in semesters:
+        for semester in semesters_by_id.values():
             semesters_by_year.setdefault(semester.semester_year, []).append(semester)
 
         return [
@@ -85,12 +88,13 @@ class CourseProgressService:
         course_name: str,
         description: str,
         credits: int,
+        degree_id: int,
     ) -> bool:
         if credits <= 0:
             raise ValueError("Course credits must be greater than zero")
         if not course_code.strip() or not course_name.strip():
             raise ValueError("Course code and course name are required")
-        return self.repository.add_completed_course(
+        added = self.repository.add_completed_course(
             user_id,
             semester_id,
             course_code,
@@ -98,6 +102,26 @@ class CourseProgressService:
             description,
             credits,
         )
+        if added:
+            semester = self.repository.get_semester(semester_id)
+            if semester is not None:
+                semester_number = (semester.start_date.month - 1) // 4 + 1
+                calendar_years = sorted(
+                    {item.semester_year for item in self.repository.get_semesters(user_id)}
+                )
+                if semester.semester_year in calendar_years:
+                    academic_year_number = calendar_years.index(semester.semester_year) + 1
+                elif calendar_years:
+                    academic_year_number = len(calendar_years) + 1
+                else:
+                    academic_year_number = 1
+                self.repository.ensure_degree_requirement(
+                    degree_id,
+                    course_code.strip().upper(),
+                    academic_year_number,
+                    semester_number,
+                )
+        return added
 
     def add_semester(
         self,
@@ -122,6 +146,7 @@ class CourseProgressService:
         user_id: int,
         academic_year_label: str,
         semester_number: int,
+        degree_id: int,
     ) -> bool:
         match = re.fullmatch(r"year\s+([1-9][0-9]*)", academic_year_label.strip(), re.IGNORECASE)
         if match is None:
@@ -130,8 +155,10 @@ class CourseProgressService:
             raise ValueError("Choose Semester 1, 2, or 3")
 
         academic_year_number = int(match.group(1))
-        existing_semesters = self.repository.get_semesters(user_id)
-        calendar_years = sorted({semester.semester_year for semester in existing_semesters})
+        completed = self.repository.get_completed_courses(user_id, degree_id)
+        calendar_years = sorted(
+            {semester.semester_year for _course, semester, _selection in completed}
+        )
         if academic_year_number <= len(calendar_years):
             calendar_year = calendar_years[academic_year_number - 1]
         elif calendar_years:
@@ -147,12 +174,19 @@ class CourseProgressService:
             end_month,
             monthrange(calendar_year, end_month)[1],
         )
-        return self.add_semester(
+        if self.add_semester(
             f"Semester {semester_number}",
             calendar_year,
             start_date,
             end_date,
-        )
+        ):
+            return True
+        semester = self.repository.find_semester(calendar_year, semester_number)
+        if semester is not None and not self.repository.student_has_selections_in_semester(
+            user_id, semester.semester_id
+        ):
+            return True
+        return False
 
     def delete_completed_course(self, user_id: int, selection_id: int) -> bool:
         return self.repository.delete_completed_course(user_id, selection_id)

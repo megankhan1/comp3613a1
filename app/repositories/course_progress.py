@@ -14,19 +14,87 @@ class CourseProgressRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_completed_courses(self, user_id: int):
+    def get_completed_courses(self, user_id: int, degree_id: int):
         statement = (
             select(Course, Semester, CourseSelection)
             .join(CourseSelection, CourseSelection.course_code == Course.course_code)
             .join(Semester, Semester.semester_id == CourseSelection.semester_id)
             .join(Student, Student.student_id == CourseSelection.student_id)
+            .join(
+                DegreeRequirement,
+                DegreeRequirement.course_code == Course.course_code,
+            )
             .where(
                 Student.user_id == user_id,
+                DegreeRequirement.degree_id == degree_id,
                 CourseSelection.status == "completed",
             )
             .order_by(Semester.semester_year.desc(), Course.course_code)
         )
         return self.db.exec(statement).all()
+
+    def get_empty_semesters(self):
+        statement = (
+            select(Semester)
+            .outerjoin(
+                CourseSelection,
+                CourseSelection.semester_id == Semester.semester_id,
+            )
+            .where(CourseSelection.selection_id.is_(None))
+            .order_by(Semester.start_date)
+        )
+        return self.db.exec(statement).all()
+
+    def get_semester(self, semester_id: int):
+        return self.db.get(Semester, semester_id)
+
+    def find_semester(self, calendar_year: int, semester_number: int):
+        start_month = (semester_number - 1) * 4 + 1
+        return self.db.exec(
+            select(Semester).where(
+                Semester.semester_year == calendar_year,
+                Semester.start_date == date(calendar_year, start_month, 1),
+            )
+        ).first()
+
+    def student_has_selections_in_semester(self, user_id: int, semester_id: int) -> bool:
+        statement = (
+            select(CourseSelection.selection_id)
+            .join(Student, Student.student_id == CourseSelection.student_id)
+            .where(
+                Student.user_id == user_id,
+                CourseSelection.semester_id == semester_id,
+            )
+        )
+        return self.db.exec(statement).first() is not None
+
+    def ensure_degree_requirement(
+        self,
+        degree_id: int,
+        course_code: str,
+        expected_year: int,
+        expected_semester: int,
+        requirement_type: str = "Core",
+        minimum_grade: str = "C",
+    ) -> None:
+        existing = self.db.exec(
+            select(DegreeRequirement).where(
+                DegreeRequirement.degree_id == degree_id,
+                DegreeRequirement.course_code == course_code,
+            )
+        ).first()
+        if existing is None:
+            self.db.add(
+                DegreeRequirement(
+                    degree_id=degree_id,
+                    course_code=course_code,
+                    requirement_type=requirement_type,
+                    minimum_grade=minimum_grade,
+                    expected_year=expected_year,
+                    expected_semester=expected_semester,
+                )
+            )
+            self.db.commit()
 
     def get_semesters(self, user_id: int):
         student_id = select(Student.student_id).where(Student.user_id == user_id).scalar_subquery()

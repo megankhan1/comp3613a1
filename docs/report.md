@@ -198,7 +198,20 @@ The student screens show pending submission and approved/denied semester statuse
 
 One named workflow at a time. Include verify notes and polish / model revisions (Phase 5). Do not treat the first build as final.
 
-- **Role provisioning:** public registration creates Student accounts; Admin/Advisor access remains seeded for testing and is not selectable during public registration.
+- **Role provisioning:** public registration creates Student accounts; Admin/Advisor access remains seeded for testing and is not selectable during public registration. Bob's seeded `current_year` is Year 3 (fresh profiles start there; existing default Year 1 profiles migrate up). All degrees now sit under Faculty of Science and Technology; any legacy Faculty of Science rows migrate on seed so that faculty disappears. Degrees were renamed to BSc Computer Science (Major) and BSc Mathematics (Minor), with duplicate-name merges keeping the assigned degree. The old BSc Computer Science catalog entry was retired — its courses (COMP1600, COMP1601, COMP2603, COMP2611, COMP3613) already live as requirements on BSc Computer Science — as was the colliding BSc Mathematics catalog entry, leaving one degree per name.
+- **Completed-courses seed (bob):** Year 1 Sem 1: COMP1600, COMP1601, INFO1600, MATH1150, FOUN1101; Year 1 Sem 2: COMP1602, COMP1604, INFO1601, FOUN1301; Year 1 Sem 3: COMP1603; Year 2 Sem 1: COMP2601, COMP2602, COMP2605, COMP2611, MATH2250; Year 2 Sem 2: COMP2604, COMP2606, INFO2602, INFO2604, FOUN1105; Year 2 Sem 3: COMP2603. Seeded as `completed` selections across 2023–2024 semesters on every `seed`/`init --no-drop`.
+- **CS-only scoping:** those 21 courses plus CSCI110 are seeded as Computer Science (Major) `DEGREE_REQUIREMENT` rows (Core), and the Completed view now filters by the viewed degree's requirements — so the history shows only under the Computer Science degree, not Mathematics. Adding a completed course under a degree also tags it as that degree's requirement. The extra-semester year mapping is scoped per degree too, and reusing a shared semester row with no selections of yours counts as added instead of a false duplicate. Student verification pending.
+- **Year 3 roadmap seed (CS):** Year 1 Sem 1/2 and Year 2 Sem 1/2 have no remaining courses (all completed). Year 3 Sem 1 Core: COMP3602, COMP3603, COMP3991; Electives: COMP3605, COMP3606, COMP3607, COMP3612, COMP3613, INFO2605, INFO3600, INFO3605. Year 3 Sem 2 Core: COMP3601, INFO3604; Electives: COMP3608, COMP3609, COMP3610, COMP3611, COMP3612, INFO3606, INFO3607, INFO3608, INFO3611 (all 3 credits). COMP3612 appears in both semesters, so it holds two requirement rows; shared catalog titles were aligned to these names. Student verification pending.
+
+<!-- student-build:code-check
+workflow: Select degree and track progress
+form: snippet
+layer: router
+architecture_ok: yes
+implement_confidence: 0.70
+passed: partial
+note: Guide wired degree_id through the completed view and add action after the student hit the missing-arg error.
+-->
 - **Advisor workflow decision:** the existing seeded `admin` login also acts as Advisor and links to one Advisor profile. Review actions apply to the semester's submitted courses as a group, following the advisor wireframe. A denial requires an explanation; the Advisor's notes are saved with the selections and shown to the student on the semester page.
 - **Advisor review implementation:** `/admin/advising` lists pending semester submissions grouped by student and semester with the submitted courses. The seeded `admin` account is linked to an Advisor profile. Approval may include optional notes; denial requires notes, and those notes appear beside denied courses in the student's semester plan. Student/Advisor workflow verification is pending.
 - **Workflow 1 refinement:** assigned Major/Minor/Special degree cards appear on the student home page. Clicking a card opens a degree action page with `Track degree` and `Plan semester`. Tracking a degree opens `Completed courses` and `Remaining courses` actions. Students may record previously completed courses and add past semesters; a grade is not required. Completed courses shows code-only entries grouped by collapsible `Year 1`, `Year 2`, etc. sections and horizontal collapsible semester columns; clicking a code opens course details and a delete action that removes only the student's completion record. Every semester has an `Add course` dialog and a `Delete semester` action. Deleting a semester removes this student's completed entries and deletes the shared semester row only when no selections reference it. The `Add extra semester` dialog appears at the end of page content and asks for a `Year N` label and one of three semester radio choices; the label maps to a real calendar year for stored semester dates. Remaining courses shows the degree roadmap for `DEGREE.expected_years`, with three horizontal semester columns per year. Uncompleted `DEGREE_REQUIREMENT` rows appear in their expected term, separated into Core and specific Elective courses; Semester 3 is marked optional. Completed courses are removed from the roadmap. Course codes open an information dialog, and no add/delete controls appear on this page. Degree requirements without an expected term are outside the roadmap and should be assigned during curriculum setup. The authenticated sidebar stays viewport-height and sticky while long page content scrolls. Student verification of this refinement is pending.
@@ -310,20 +323,21 @@ passed: yes
 note: Student kept advisor_decide_semester_action thin by constructing repository plus service and calling decide_semester.
 -->
 - **Advisor review verified:** `/admin/advising` groups pending semesters with submitted courses; denial requires notes and surfaces them to the student semester page. Student verified: approve works, deny without notes shows the error, deny with notes updates the student page — yes it works.
+- **Advisor dedup:** students with two degrees now appear for approval under one degree only (their Major, else first assigned), since plan semesters are shared across degrees; the decision still shows on the student's side under each degree. Student verification pending.
 - **Toast polish verified:** advisor `Semester approved / denied` alerts and all success toasts auto-dismiss after about four seconds; removed the student `Needs attention` warning popup so warnings no longer show as a toast box; removed per-course Approved/Denied/Pending badges so only the top semester status shows with one persistent advisor-feedback line above the course list. Student verified: toasts vanish, warning box gone, feedback stays above the list — yes.
 
 ## Deployed app
 
 Phase 6. Public Render URL (not localhost). Markers open this to mark the three workflows.
 
-https://
+https://myadvisor-choc.onrender.com
 
 ## Logins
 
 Every account a marker needs, including extra users you added. Starter accounts:
 
-- bob / bobpass — regular user
-- admin / adminpass — admin
+- bob / bobpass — student
+- admin / adminpass — advisor (admin)
 
 ## YouTube URL
 

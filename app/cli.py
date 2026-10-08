@@ -120,19 +120,67 @@ def cmd_seed(args: argparse.Namespace) -> None:
                     first_name="Bob",
                     last_name="Student",
                     email=demo_student_user.email,
+                    current_year=3,
                 )
                 session.add(student)
                 session.commit()
                 session.refresh(student)
                 print("  create Student profile for bob")
+            elif student.current_year == 1:
+                student.current_year = 3
+                session.add(student)
+                session.commit()
+                print("  move bob to Year 3")
+
+            for old_name, new_name in (
+                ("Computer Science", "BSc Computer Science"),
+                ("Mathematics", "BSc Mathematics"),
+            ):
+                old_degree = session.exec(
+                    select(Degree).where(Degree.degree_name == old_name)
+                ).one_or_none()
+                new_degree = session.exec(
+                    select(Degree).where(Degree.degree_name == new_name)
+                ).one_or_none()
+                if old_degree is None:
+                    continue
+                if new_degree is None or old_degree.degree_id == new_degree.degree_id:
+                    old_degree.degree_name = new_name
+                    session.add(old_degree)
+                    print(f"  rename {old_name} to {new_name}")
+                    continue
+                old_assignments = session.exec(
+                    select(StudentDegree).where(StudentDegree.degree_id == old_degree.degree_id)
+                ).all()
+                new_assignments = session.exec(
+                    select(StudentDegree).where(StudentDegree.degree_id == new_degree.degree_id)
+                ).all()
+                keep, drop = (
+                    (old_degree, new_degree)
+                    if len(old_assignments) >= len(new_assignments)
+                    else (new_degree, old_degree)
+                )
+                for requirement in session.exec(
+                    select(DegreeRequirement).where(DegreeRequirement.degree_id == drop.degree_id)
+                ).all():
+                    session.delete(requirement)
+                for assignment in session.exec(
+                    select(StudentDegree).where(StudentDegree.degree_id == drop.degree_id)
+                ).all():
+                    session.delete(assignment)
+                session.delete(drop)
+                keep.degree_name = new_name
+                session.add(keep)
+                print(f"  merge duplicate into {new_name}")
+            session.commit()
 
             assignments = session.exec(
                 select(StudentDegree).where(StudentDegree.student_id == student.student_id)
             ).all()
             if not assignments:
                 demo_degrees = [
-                    ("Computer Science (Special)", "Faculty of Science", 120, 3, "Major"),
-                    ("Mathematics", "Faculty of Science", 90, 2, "Minor"),
+                    ("BSc Computer Science", "Faculty of Science and Technology", 93, 3, "Major"),
+                    ("BSc Mathematics", "Faculty of Science and Technology", 15, 2, "Minor"),
                 ]
                 for degree_name, faculty_name, credits, expected_years, program_type in demo_degrees:
                     degree = session.exec(
@@ -162,25 +210,25 @@ def cmd_seed(args: argparse.Namespace) -> None:
                 print("  create demo Major and Minor degree assignments for bob")
 
             major = session.exec(
-                select(Degree).where(Degree.degree_name == "Computer Science (Special)")
+                select(Degree).where(Degree.degree_name == "BSc Computer Science")
             ).one()
             minor = session.exec(
-                select(Degree).where(Degree.degree_name == "Mathematics")
+                select(Degree).where(Degree.degree_name == "BSc Mathematics")
             ).one()
             major.expected_years = 3
             minor.expected_years = 2
             session.add(major)
             session.add(minor)
             demo_courses = [
-                ("CSCI110", "Introduction to Computing", "Programming foundations", 3, major, "Core", "C", 1, 1),
-                ("CSCI210", "Data Structures", "Core data structures", 3, major, "Core", "C", 1, 2),
-                ("CSCI220", "Algorithms", "Algorithm design and analysis", 3, major, "Core", "C", 2, 1),
-                ("CSCI230", "Database Systems", "Relational database fundamentals", 3, major, "Elective", "C", 2, 2),
-                ("CSCI240", "Operating Systems", "Processes, memory, and scheduling", 3, major, "Core", "C", 3, 1),
-                ("CSCI250", "Computer Networks", "Network protocols and architecture", 3, major, "Elective", "C", 3, 2),
-                ("MATH101", "Calculus I", "Differential calculus", 3, minor, "Core", "C", 1, 1),
-                ("MATH201", "Linear Algebra", "Vectors and matrices", 3, minor, "Core", "C", 1, 2),
-                ("MATH220", "Discrete Mathematics", "Logic and discrete structures", 3, minor, "Elective", "C", 2, 1),
+                ("COMP3602", "Theory of Computing", "Explores formal languages, automata, computability, and the theoretical foundations of computation.", 3, major, "Core", "C", 1, 1),
+                ("COMP3603", "Human Computer Interaction", "Explores how people interact with technology and how to design user-friendly, accessible interfaces.", 3, major, "Core", "C", 1, 2),
+                ("COMP3991", "Applied Mathematics for Scientific Computing", "Applies mathematical methods and computational techniques to solve scientific and real-world problems.", 3, major, "Core", "C", 2, 1),
+                ("COMP3605", "Introduction to Data Analytics", "Introduces data analysis techniques for discovering patterns, insights, and trends from data.", 3, major, "Elective", "C", 2, 2),
+                ("COMP3613", "Software Engineering II", "Covers software development practices, system design, testing, teamwork, and project management.", 3, major, "Elective", "C", 3, 1),
+                ("COMP3606", "Wireless and Mobile Computing", "Explores wireless and mobile technologies, including networking, communication, and device design.", 3, major, "Elective", "C", 3, 2),
+                ("MATH3273", "Linear Algebra II", "Covers vectors, matrices, linear transformations, eigenvalues, and advanced linear algebra concepts.", 3, minor, "Core", "C", 1, 1),
+                ("MATH3277", "Introduction to Real Analysis II", "An introduction to the theory of real numbers and functions of a real variable.", 3, minor, "Core", "C", 1, 2),
+                ("MATH3278", "Probability Theory II ", "Covers advanced probability concepts, distributions, random variables, and statistical methods.", 3, minor, "Elective", "C", 2, 1),
             ]
             for code, name, description, credits, degree, requirement_type, minimum_grade, expected_year, expected_semester in demo_courses:
                 course = session.get(Course, code)
@@ -219,19 +267,6 @@ def cmd_seed(args: argparse.Namespace) -> None:
 
             uwi_catalog = [
                 (
-                    "BSc Computer Science",
-                    "Faculty of Science and Technology",
-                    90,
-                    3,
-                    [
-                        ("COMP1600", "Introduction to Computer Science", "Problem solving and programming fundamentals", 3, "Core", 1, 1),
-                        ("COMP1601", "Computer Programming I", "Programming concepts and software development", 3, "Core", 1, 2),
-                        ("COMP2603", "Data Structures and Algorithms", "Data structures, algorithms, and complexity", 3, "Core", 2, 1),
-                        ("COMP2611", "Database Systems", "Relational database design and SQL", 3, "Core", 2, 2),
-                        ("COMP3613", "Software Engineering", "Software lifecycle, requirements, and testing", 3, "Core", 3, 1),
-                    ],
-                ),
-                (
                     "BSc Information Technology",
                     "Faculty of Science and Technology",
                     90,
@@ -239,20 +274,8 @@ def cmd_seed(args: argparse.Namespace) -> None:
                     [
                         ("INFO1600", "Information Technology Fundamentals", "Information systems and digital technologies", 3, "Core", 1, 1),
                         ("INFO1601", "Web Development", "Client-side and server-side web development", 3, "Core", 1, 2),
-                        ("INFO2602", "Systems Analysis and Design", "Analysis and design of information systems", 3, "Core", 2, 1),
+                        ("INFO2602", "Web Programming and Technologies I", "Introduces web development, including HTML, CSS, JavaScript, and server-side technologies.", 3, "Core", 2, 1),
                         ("INFO2605", "Network Administration", "Network services, administration, and security", 3, "Core", 2, 2),
-                    ],
-                ),
-                (
-                    "BSc Mathematics",
-                    "Faculty of Science and Technology",
-                    90,
-                    3,
-                    [
-                        ("MATH1140", "Calculus I", "Differential and integral calculus", 3, "Core", 1, 1),
-                        ("MATH1150", "Linear Algebra", "Vectors, matrices, and linear transformations", 3, "Core", 1, 2),
-                        ("MATH2110", "Differential Equations", "First and higher-order differential equations", 3, "Core", 2, 1),
-                        ("MATH2210", "Probability and Statistics", "Probability models and statistical methods", 3, "Core", 2, 2),
                     ],
                 ),
                 (
@@ -370,59 +393,215 @@ def cmd_seed(args: argparse.Namespace) -> None:
                         session.add(requirement)
             session.commit()
 
-            fall_2025 = session.exec(
-                select(Semester).where(
-                    Semester.semester_name == "Fall",
-                    Semester.semester_year == 2025,
-                )
-            ).first()
-            if fall_2025 is None:
-                fall_2025 = Semester(
-                    semester_name="Fall",
-                    semester_year=2025,
-                    start_date=date(2025, 9, 1),
-                    end_date=date(2025, 12, 20),
-                )
-                session.add(fall_2025)
-                session.flush()
-
-            completed_record = session.exec(
-                select(CourseSelection).where(
-                    CourseSelection.student_id == student.student_id,
-                    CourseSelection.course_code == "CSCI110",
-                    CourseSelection.semester_id == fall_2025.semester_id,
-                    CourseSelection.status == "completed",
-                )
-            ).first()
-            if completed_record is None:
+            completed_history = [
+                (1, 1, ["COMP1600", "COMP1601", "INFO1600", "MATH1150", "FOUN1101"]),
+                (1, 2, ["COMP1602", "COMP1604", "INFO1601", "FOUN1301"]),
+                (1, 3, ["COMP1603"]),
+                (2, 1, ["COMP2601", "COMP2602", "COMP2605", "COMP2611", "MATH2250"]),
+                (2, 2, ["COMP2604", "COMP2606", "INFO2602", "INFO2604", "FOUN1105"]),
+                (2, 3, ["COMP2603"]),
+            ]
+            for expected_year, semester_number, codes in completed_history:
+                calendar_year = 2022 + expected_year
+                start_month = (semester_number - 1) * 4 + 1
+                end_month = start_month + 3
+                semester = session.exec(
+                    select(Semester).where(
+                        Semester.semester_year == calendar_year,
+                        Semester.start_date == date(calendar_year, start_month, 1),
+                    )
+                ).first()
+                if semester is None:
+                    semester = Semester(
+                        semester_name=f"Semester {semester_number}",
+                        semester_year=calendar_year,
+                        start_date=date(calendar_year, start_month, 1),
+                        end_date=date(calendar_year, end_month, 28),
+                    )
+                    session.add(semester)
+                    session.flush()
+                for code in codes:
+                    if session.get(Course, code) is None:
+                        session.add(
+                            Course(
+                                course_code=code,
+                                course_name=code,
+                                description="",
+                                credits=3,
+                            )
+                        )
+                        session.flush()
+                    existing = session.exec(
+                        select(CourseSelection).where(
+                            CourseSelection.student_id == student.student_id,
+                            CourseSelection.course_code == code,
+                            CourseSelection.semester_id == semester.semester_id,
+                            CourseSelection.status == "completed",
+                        )
+                    ).first()
+                    if existing is None:
+                        session.add(
+                            CourseSelection(
+                                student_id=student.student_id,
+                                course_code=code,
+                                semester_id=semester.semester_id,
+                                status="completed",
+                            )
+                        )
+                    requirement = session.exec(
+                        select(DegreeRequirement).where(
+                            DegreeRequirement.degree_id == major.degree_id,
+                            DegreeRequirement.course_code == code,
+                        )
+                    ).first()
+                    if requirement is None:
+                        session.add(
+                            DegreeRequirement(
+                                degree_id=major.degree_id,
+                                course_code=code,
+                                requirement_type="Core",
+                                minimum_grade="C",
+                                expected_year=expected_year,
+                                expected_semester=semester_number,
+                            )
+                        )
+            if session.get(Course, "CSCI110") is None:
                 session.add(
-                    CourseSelection(
-                        student_id=student.student_id,
+                    Course(
                         course_code="CSCI110",
-                        semester_id=fall_2025.semester_id,
-                        status="completed",
+                        course_name="Introduction to Computing",
+                        description="",
+                        credits=3,
                     )
                 )
-
-            pending_record = session.exec(
-                select(CourseSelection).where(
-                    CourseSelection.student_id == student.student_id,
-                    CourseSelection.course_code == "CSCI210",
-                    CourseSelection.semester_id == fall_2025.semester_id,
-                    CourseSelection.status == "pending",
+                session.flush()
+            csci_requirement = session.exec(
+                select(DegreeRequirement).where(
+                    DegreeRequirement.degree_id == major.degree_id,
+                    DegreeRequirement.course_code == "CSCI110",
                 )
             ).first()
-            if pending_record is None:
+            if csci_requirement is None:
                 session.add(
-                    CourseSelection(
-                        student_id=student.student_id,
-                        course_code="CSCI210",
-                        semester_id=fall_2025.semester_id,
-                        status="pending",
+                    DegreeRequirement(
+                        degree_id=major.degree_id,
+                        course_code="CSCI110",
+                        requirement_type="Core",
+                        minimum_grade="C",
+                        expected_year=3,
+                        expected_semester=3,
                     )
                 )
+            cs_year3 = [
+                ("COMP3602", "Theory of Computing", "Explores formal languages, automata, computability, and the theoretical foundations of computation.", "Core", 3, 1),
+                ("COMP3603", "Human-Computer Interaction", "Explores how people interact with technology and how to design user-friendly, accessible interfaces.", "Core", 3, 1),
+                ("COMP3991", "Applied Mathematics for Scientific Computing", "Applies mathematical methods and computational techniques to solve scientific and real-world problems.", "Core", 3, 1),
+                ("COMP3605", "Introduction to Data Analytics", "Introduces data analysis techniques for discovering patterns, insights, and trends from data.", "Elective", 3, 1),
+                ("COMP3606", "Wireless and Mobile Computing", "Explores wireless and mobile technologies, including networking, communication, and device design.", "Elective", 3, 1),
+                ("COMP3607", "Object-Oriented Programming II", "", "Elective", 3, 1),
+                ("COMP3613", "Software Engineering II", "Covers software development practices, system design, testing, teamwork, and project management.", "Elective", 3, 1),
+                ("INFO2605", "Professional Ethics and Law", "", "Elective", 3, 1),
+                ("INFO3600", "Business Information Systems", "", "Elective", 3, 1),
+                ("INFO3605", "Fundamentals of LAN Technologies", "", "Elective", 3, 1),
+                ("COMP3601", "Design and Analysis of Algorithms", "", "Core", 3, 2),
+                ("INFO3604", "Project", "", "Core", 3, 2),
+                ("COMP3608", "Intelligent Systems", "", "Elective", 3, 2),
+                ("COMP3609", "Game Programming", "", "Elective", 3, 2),
+                ("COMP3610", "Big Data Analytics", "", "Elective", 3, 2),
+                ("COMP3611", "Modelling and Simulation", "Not offered in 2024/2025.", "Elective", 3, 2),
+                ("INFO3606", "Cloud Computing", "", "Elective", 3, 2),
+                ("INFO3607", "Fundamentals of WAN Technologies", "", "Elective", 3, 2),
+                ("INFO3608", "E-Commerce", "", "Elective", 3, 2),
+                ("INFO3611", "Database Administration", "", "Elective", 3, 2),
+            ]
+            for code, name, description, requirement_type, expected_year, expected_semester in cs_year3:
+                course = session.get(Course, code)
+                if course is None:
+                    course = Course(
+                        course_code=code,
+                        course_name=name,
+                        description=description,
+                        credits=3,
+                    )
+                    session.add(course)
+                    session.flush()
+                else:
+                    course.course_name = name
+                    course.description = description
+                    course.credits = 3
+                    session.add(course)
+                requirement = session.exec(
+                    select(DegreeRequirement).where(
+                        DegreeRequirement.degree_id == major.degree_id,
+                        DegreeRequirement.course_code == code,
+                    )
+                ).first()
+                if requirement is None:
+                    session.add(
+                        DegreeRequirement(
+                            degree_id=major.degree_id,
+                            course_code=code,
+                            requirement_type=requirement_type,
+                            minimum_grade="C",
+                            expected_year=expected_year,
+                            expected_semester=expected_semester,
+                        )
+                    )
+                else:
+                    requirement.requirement_type = requirement_type
+                    requirement.expected_year = expected_year
+                    requirement.expected_semester = expected_semester
+                    session.add(requirement)
+            special_course = session.get(Course, "COMP3612")
+            if special_course is None:
+                session.add(
+                    Course(
+                        course_code="COMP3612",
+                        course_name="Special Topics in Computer Science",
+                        description="Not offered in 2024/2025.",
+                        credits=3,
+                    )
+                )
+                session.flush()
+            else:
+                special_course.course_name = "Special Topics in Computer Science"
+                special_course.description = "Not offered in 2024/2025."
+                special_course.credits = 3
+                session.add(special_course)
+            existing_special = session.exec(
+                select(DegreeRequirement).where(
+                    DegreeRequirement.degree_id == major.degree_id,
+                    DegreeRequirement.course_code == "COMP3612",
+                )
+            ).all()
+            for index, (expected_year, expected_semester) in enumerate([(3, 1), (3, 2)]):
+                if index < len(existing_special):
+                    row = existing_special[index]
+                    row.requirement_type = "Elective"
+                    row.expected_year = expected_year
+                    row.expected_semester = expected_semester
+                    session.add(row)
+                else:
+                    session.add(
+                        DegreeRequirement(
+                            degree_id=major.degree_id,
+                            course_code="COMP3612",
+                            requirement_type="Elective",
+                            minimum_grade="C",
+                            expected_year=expected_year,
+                            expected_semester=expected_semester,
+                        )
+                    )
+            relocated = session.exec(
+                select(Degree).where(Degree.faculty_name == "Faculty of Science")
+            ).all()
+            for degree in relocated:
+                degree.faculty_name = "Faculty of Science and Technology"
+                session.add(degree)
             session.commit()
-            print("  ensure sample degree requirements, one completed course, and one pending review for bob")
+            if relocated:
+                print(f"  move {len(relocated)} degree(s) to Faculty of Science and Technology")
+            print("  ensure sample degree requirements, completed history, and one pending review for bob")
 
     print(f"Seed done — created {created}, skipped {skipped}.")
     print("Login with bob/bobpass or admin/adminpass")

@@ -31,6 +31,22 @@ class AdvisorReviewRepository:
         )
         return self.db.exec(statement).all()
 
+    def get_primary_degree_id(self, student_id: int):
+        rows = self.db.exec(
+            select(StudentDegree).where(StudentDegree.student_id == student_id)
+        ).all()
+        if not rows:
+            return None
+        preference = {"Major": 0, "Minor": 1, "Special": 2}
+        ordered = sorted(
+            rows,
+            key=lambda assignment: (
+                preference.get(assignment.program_type, 9),
+                assignment.degree_id,
+            ),
+        )
+        return ordered[0].degree_id
+
     def get_pending_students_for_degree(self, degree_id: int):
         statement = (
             select(Student, StudentDegree.program_type)
@@ -47,6 +63,7 @@ class AdvisorReviewRepository:
         return [
             {"student": student, "program_type": program_type}
             for student, program_type in rows
+            if self.get_primary_degree_id(student.student_id) == degree_id
         ]
 
     def get_pending_review_for_student_degree(self, student_id: int, degree_id: int):

@@ -43,7 +43,7 @@ async def completed_courses_view(
 ):
     degree, program_type = _degree_services(db, user.id, degree_id)
     course_progress_service = CourseProgressService(CourseProgressRepository(db))
-    semester_groups = course_progress_service.get_completed_courses(user.id)
+    semester_groups = course_progress_service.get_completed_courses(user.id, degree_id)
     return templates.TemplateResponse(
         request=request,
         name="completed-courses.html",
@@ -81,6 +81,7 @@ async def add_completed_course_action(
             course_name.strip(),
             description.strip(),
             credits,
+            degree_id,
         )
         if added:
             flash(request, "Completed course added.")
@@ -110,6 +111,7 @@ async def add_completed_semester_action(
             user.id,
             academic_year_label,
             semester_number,
+            degree_id,
         )
         if added:
             flash(request, "Semester added.")
