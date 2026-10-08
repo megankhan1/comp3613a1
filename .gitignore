@@ -206,9 +206,3 @@ docs/transcripts.zip
 
 # Node (mermaid-cli). package.json + package-lock.json are committed.
 node_modules/
-# Local/editor files
-GitHub Copilot/
-cursor/
-.venv/
-.env
-database.db
