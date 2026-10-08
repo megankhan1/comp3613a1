@@ -9,9 +9,9 @@
 .plan-course-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.8rem 1rem; border: 1px solid #d7e2eb; border-radius: var(--brand-radius); background: var(--brand-surface); text-align: left; }
 .plan-course-code { font-weight: 700; }
 .plan-course-description { color: var(--brand-muted); font-size: 0.82rem; }
-.plan-menu-trigger { display: inline-flex; align-items: center; justify-content: center; width: 4.2rem; height: 4.2rem; flex: 0 0 4.2rem; border: 0; border-radius: 50%; background: transparent; color: #000; }
+.plan-menu-trigger { display: inline-flex; align-items: center; justify-content: center; width: 4.2rem; height: 4.2rem; flex: 0 0 4.2rem; border: 0; border-radius: 50%; background: transparent; color: var(--brand-ink); }
 .plan-menu-trigger .material-symbols-outlined { font-size: 3.6rem; font-variation-settings: "FILL" 1, "wght" 900, "GRAD" 0, "opsz" 48; }
-.plan-menu-trigger:hover, .plan-menu-trigger:focus-visible { background: #edf3f7; }
+.plan-menu-trigger:hover, .plan-menu-trigger:focus-visible { background: color-mix(in srgb, var(--brand-accent) 18%, transparent); }
 .plan-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.7rem; margin: 1.5rem auto 0; }
 .plan-add-section { width: 100%; max-width: 54rem; margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid #d7e2eb; }
 .plan-add-trigger { margin-top: 1.5rem; }
@@ -19,8 +19,9 @@
 .plan-add-form .wide-field { grid-column: 1 / -1; }
 .plan-add-form .form-label { font-size: 0.82rem; font-weight: 600; }
 .plan-empty { width: 100%; max-width: 54rem; padding: 1rem; border: 1px dashed #cbd7e1; border-radius: var(--brand-radius); color: var(--brand-muted); }
-dialog.plan-dialog { width: min(34rem, calc(100% - 2rem)); max-height: min(85vh, 44rem); padding: 1.4rem; border: 1px solid #d7e2eb; border-radius: var(--brand-radius); color: var(--brand-ink); box-shadow: 0 20px 60px rgba(16, 38, 63, 0.2); }
-dialog.plan-dialog::backdrop { background: rgba(16, 38, 63, 0.42); }
+.advisor-feedback { background: #fff1c2; border: 1px solid #e2be63; border-radius: 0.25rem; padding: 0.5rem 0.6rem; color: #684b00; }
+dialog.plan-dialog { width: min(34rem, calc(100% - 2rem)); max-height: min(85vh, 44rem); padding: 1.4rem; border: 1px solid #2a4a71; border-radius: var(--brand-radius); color: var(--brand-ink); background: #0d233c; box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55); }
+dialog.plan-dialog::backdrop { background: rgba(2, 8, 18, 0.65); }
 .plan-dialog-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
 .plan-dialog-actions { display: flex; justify-content: space-between; gap: 0.7rem; margin-top: 1.25rem; }
 .plan-menu-options { display: grid; gap: 0.5rem; }
@@ -53,14 +54,21 @@ dialog.plan-dialog::backdrop { background: rgba(16, 38, 63, 0.42); }
   </header>
 
   {% if slot.courses %}
+  {% set feedback_ns = namespace(text=None) %}
+  {% for course, selection in slot.courses %}
+    {% if selection.status == 'denied' and selection.notes and not feedback_ns.text %}
+      {% set feedback_ns.text = selection.notes %}
+    {% endif %}
+  {% endfor %}
+  {% if slot.status == 'denied' and feedback_ns.text %}
+  <p class="advisor-feedback small mt-0 mb-3">Advisor feedback: {{ feedback_ns.text }}</p>
+  {% endif %}
   <div class="plan-course-list">
     {% for course, selection in slot.courses %}
     <article class="plan-course-row">
       <div>
         <div><span class="plan-course-code">{{ course.course_code }}</span> <span>{{ course.course_name }}</span></div>
         {% if course.description %}<p class="plan-course-description mb-0">{{ course.description }}</p>{% endif %}
-        {% if selection.status == 'pending' %}<span class="plan-detail-status">Pending</span>{% elif selection.status == 'approved' %}<span class="badge text-bg-success mt-1">Approved</span>{% elif selection.status == 'denied' %}<span class="badge text-bg-danger mt-1">Denied</span>{% endif %}
-        {% if selection.status == 'denied' and selection.notes %}<p class="alert alert-warning small mt-2 mb-0">Advisor feedback: {{ selection.notes }}</p>{% endif %}
       </div>
       {% if slot.can_edit %}
       <button class="plan-menu-trigger" type="button" data-dialog-open="course-menu-{{ selection.selection_id }}" title="Course options" aria-label="Options for {{ course.course_code }}">
@@ -154,7 +162,7 @@ dialog.plan-dialog::backdrop { background: rgba(16, 38, 63, 0.42); }
     dialog.addEventListener("click", (event) => { if (event.target === dialog) dialog.close(); });
   });
 </script>
-{% if toast %}
+{% if toast and toast.variant != 'warning' %}
 <script>
   document.addEventListener("DOMContentLoaded", () => {
     const toastElement = document.getElementById("appToast");

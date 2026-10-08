@@ -26,18 +26,22 @@
 .course-semester[open] > .course-semester-summary::before { content: "-"; }
 .semester-row {
   display: grid;
-  grid-template-columns: repeat(3, minmax(14rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
   gap: 1rem;
-  align-items: start;
-  overflow-x: auto;
+  align-items: stretch;
+  overflow-x: visible;
   padding: 0 0 1rem;
 }
 .course-semester {
   min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   border: 1px solid #d7e2eb;
   border-radius: var(--brand-radius);
   background: var(--brand-surface);
 }
+.course-semester:not([open]) { height: auto; align-self: start; }
 .course-semester-summary {
   padding: 0.8rem 0.9rem;
   color: var(--brand-ink);
@@ -46,8 +50,8 @@
   list-style: none;
 }
 .course-semester-subtitle { display: block; margin: 0.2rem 0 0 1.25rem; color: var(--brand-muted); font-size: 0.75rem; font-weight: 400; }
-.course-semester-content { padding: 0 0.9rem 0.9rem; }
-.course-code-list { display: grid; gap: 0.35rem; margin: 0 0 0.8rem; }
+.course-semester-content { padding: 0 0.9rem 0.9rem; flex: 1; display: flex; flex-direction: column; }
+.course-code-list { display: grid; gap: 0.35rem; margin: 0 0 0.8rem; flex: 1; align-content: start; }
 .course-code-link {
   width: fit-content;
   padding: 0;
@@ -71,8 +75,9 @@
   text-decoration: underline;
   text-underline-offset: 0.16em;
 }
-.semester-actions { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem; margin-top: 0.8rem; }
-.delete-semester-action { color: #a33a42; }
+.semester-actions { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem; margin-top: auto; padding-top: 0.8rem; }
+.delete-semester-action { color: var(--brand-muted); font-size: 0.75rem; text-decoration: none; opacity: 0.75; }
+.delete-semester-action:hover, .delete-semester-action:focus-visible { color: #6b7d90; text-decoration: underline; opacity: 1; }
 .extra-semester-section { margin-top: 1.5rem; padding: 1.25rem 0; border-top: 1px solid #d7e2eb; }
 .semester-radio-list { display: grid; gap: 0.75rem; margin-top: 1rem; }
 .semester-radio-option { display: flex; align-items: center; gap: 0.6rem; }
@@ -80,17 +85,18 @@ dialog.course-dialog {
   width: min(34rem, calc(100% - 2rem));
   max-height: min(85vh, 44rem);
   padding: 1.5rem;
-  border: 1px solid #d7e2eb;
+  border: 1px solid #2a4a71;
   border-radius: var(--brand-radius);
   color: var(--brand-ink);
-  box-shadow: 0 20px 60px rgba(16, 38, 63, 0.2);
+  background: #0d233c;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
 }
-dialog.course-dialog::backdrop { background: rgba(16, 38, 63, 0.42); }
+dialog.course-dialog::backdrop { background: rgba(2, 8, 18, 0.65); }
 .dialog-heading { display: flex; justify-content: space-between; gap: 1rem; align-items: start; margin-bottom: 1.25rem; }
 .dialog-close { border: 0; background: transparent; color: var(--brand-muted); font-size: 1.4rem; line-height: 1; }
 .dialog-actions { display: flex; justify-content: space-between; gap: 0.75rem; margin-top: 1.5rem; }
 @media (max-width: 767px) {
-  .semester-row { grid-template-columns: repeat(3, minmax(14rem, 78vw)); }
+  .semester-row { grid-template-columns: 1fr; }
   dialog.course-dialog { padding: 1.1rem; }
 }
 {% endblock %}

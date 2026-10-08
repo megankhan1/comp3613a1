@@ -1,13 +1,13 @@
 :root {
   --brand-name: "MyAdvisor";
-  --brand-bg: #f2f6f9;
-  --brand-surface: #ffffff;
-  --brand-ink: #10263f;
-  --brand-muted: #60758a;
-  --brand-accent: #2468a8;
-  --brand-accent-2: #078b89;
-  --brand-sidebar: #10263f;
-  --brand-sidebar-text: #c3d2df;
+  --brand-bg: #071426;
+  --brand-surface: #0f2743;
+  --brand-ink: #f2f7fb;
+  --brand-muted: #9db4cc;
+  --brand-accent: #3b9dff;
+  --brand-accent-2: #2dd4c4;
+  --brand-sidebar: #050f1e;
+  --brand-sidebar-text: #b9cde3;
   --brand-font-body: "Manrope", "Segoe UI", sans-serif;
   --brand-radius: 0.375rem;
 }
@@ -81,7 +81,10 @@ body {
   display: grid;
   grid-template-rows: auto 1fr auto;
   color: var(--brand-ink);
-  background: var(--brand-bg);
+  background:
+    radial-gradient(60rem 30rem at 15% -10%, color-mix(in srgb, var(--brand-accent) 22%, transparent), transparent 60%),
+    radial-gradient(50rem 26rem at 90% 0%, color-mix(in srgb, var(--brand-accent-2) 18%, transparent), transparent 60%),
+    linear-gradient(180deg, #0a1c33 0%, var(--brand-bg) 55%, #040c18 100%);
 }
 
 .landing-nav,
@@ -134,7 +137,8 @@ body {
   font-size: 3.25rem;
   line-height: 1.05;
   margin: 0 0 1.25rem;
-  color: var(--brand-ink);
+  color: #fff;
+  text-shadow: 0 0 24px color-mix(in srgb, var(--brand-accent) 45%, transparent);
 }
 
 .landing-lead {
@@ -211,17 +215,19 @@ body {
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
-  background: var(--brand-bg);
+  background:
+    radial-gradient(40rem 20rem at 50% -10%, color-mix(in srgb, var(--brand-accent-2) 16%, transparent), transparent 60%),
+    var(--brand-bg);
 }
 
 .auth-panel {
   width: min(420px, 100%);
-  background: var(--brand-surface);
+  background: color-mix(in srgb, var(--brand-surface) 92%, #000);
   color: var(--brand-ink);
-  border: 1px solid #d7e2eb;
+  border: 1px solid color-mix(in srgb, var(--brand-accent) 30%, var(--brand-surface));
   border-radius: var(--brand-radius);
   padding: 2rem 1.75rem;
-  box-shadow: 0 8px 24px rgba(16, 38, 63, 0.08);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
 }
 
 .auth-panel .brand-wordmark {
@@ -280,6 +286,24 @@ body {
   border-color: #cbd7e1;
   border-radius: var(--brand-radius);
 }
+
+/* —— Modern techy dark surfaces —— */
+.form-control, .form-select {
+  background: #0b1e36;
+  border-color: #23415f;
+  color: var(--brand-ink);
+}
+.form-control::placeholder { color: #7d95b0; }
+.text-muted { color: var(--brand-muted) !important; }
+.degree-card, .course-semester, .plan-course-row, .review-group, .student-card,
+.plan-block, .review-empty, .border.bg-white, .bg-white {
+  background: var(--brand-surface) !important;
+  border-color: #1e3a5c !important;
+  color: var(--brand-ink) !important;
+}
+.plan-empty, .review-note, .degree-card-meta, .course-semester-subtitle { color: var(--brand-muted) !important; }
+dialog.plan-dialog .btn-close, dialog.course-dialog .btn-close { filter: invert(1); }
+dialog.plan-dialog .form-label, dialog.course-dialog .form-label { color: var(--brand-ink); }
 
 @media (max-width: 575px) {
   .landing-hero .brand-wordmark {

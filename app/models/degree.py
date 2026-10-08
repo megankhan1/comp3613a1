@@ -1,6 +1,8 @@
-from typing import Optional
+from typing import Literal, Optional
 
 from sqlmodel import Field, SQLModel
+
+ProgramType = Literal["Major", "Minor", "Special"]
 
 
 class Degree(SQLModel, table=True):
@@ -14,4 +16,4 @@ class Degree(SQLModel, table=True):
 class StudentDegree(SQLModel, table=True):
     student_id: int = Field(foreign_key="student.student_id", primary_key=True)
     degree_id: int = Field(foreign_key="degree.degree_id", primary_key=True)
-    program_type: str
+    program_type: str = Field(regex="^(Major|Minor|Special)$")

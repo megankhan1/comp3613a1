@@ -42,7 +42,8 @@ async def advisor_decide_semester_action(
     notes: str = Form(default=""),
     redirect_to: str = Form(default=""),
 ):
-    advisor_service = AdvisorReviewService(AdvisorReviewRepository(db))
+    advisor_repository = AdvisorReviewRepository(db)
+    advisor_service = AdvisorReviewService(advisor_repository)
     result = advisor_service.decide_semester(
         user.id,
         student_id,

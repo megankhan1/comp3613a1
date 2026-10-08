@@ -76,7 +76,7 @@ class SemesterPlanService:
                         "status": state,
                         "can_edit": state != "pending",
                         "has_editable_courses": any(
-                            selection.status == "selected"
+                            selection.status in ("selected", "denied")
                             for _course, selection in courses
                         ),
                     }

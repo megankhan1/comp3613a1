@@ -43,12 +43,17 @@
         border-radius: var(--brand-radius);
     }
 
-    #sidebar .brand-wordmark {
-        color: #fff;
+    .topbar-wordmark {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        font-weight: 800;
         font-size: 1.25rem;
-        text-align: center;
-        margin: 1rem 0 1.5rem;
+        color: #fff;
+        text-decoration: none;
+        text-shadow: 0 0 18px color-mix(in srgb, var(--brand-accent) 50%, transparent);
     }
+    .topbar-wordmark:hover { color: var(--brand-accent-2); }
 
     #content {
         width: auto;
@@ -61,8 +66,17 @@
         flex-direction: column;
         align-items: center;
         text-align: center;
-        background-color: #f4f6f8;
+        color: var(--brand-ink);
+        background:
+            radial-gradient(50rem 24rem at 50% -8rem, color-mix(in srgb, var(--brand-accent) 14%, transparent), transparent 60%),
+            var(--brand-bg);
     }
+    #content .navbar {
+        background: color-mix(in srgb, var(--brand-surface) 88%, #000) !important;
+        border: 1px solid #1e3a5c !important;
+        color: var(--brand-ink);
+    }
+    #content .profile-name { color: var(--brand-ink); }
 
     #content > .navbar,
     #content > .row {
@@ -112,6 +126,7 @@
     }
 
     .navbar {
+        position: relative;
         border-bottom: 1px solid #dee2e6;
     }
 {% block additional_styles %}{% endblock %}
@@ -122,9 +137,7 @@
 {% set sidebar_degree_id = degree.degree_id if degree is defined else (degree_cards[0][0].degree_id if degree_cards is defined and degree_cards else none) %}
 <div id="wrapper">
     <nav id="sidebar" class="p-3 d-flex flex-column vh-100">
-        <div class="brand-wordmark">MyAdvisor</div>
-
-        <ul class="nav nav-pills flex-column gap-2 flex-grow-1">
+        <ul class="nav nav-pills flex-column gap-2 flex-grow-1 pt-2">
             {% if user.role == 'admin' %}
             <li class="nav-item">
                 <a class="nav-link d-flex align-items-center {{ 'active' if request.url.path.startswith('/admin') }}"
@@ -156,6 +169,11 @@
             <button class="btn btn-outline-secondary" id="menu-toggle" type="button">
                 <span class="material-symbols-outlined md-dark">menu</span>
             </button>
+            {% if user.role == 'admin' %}
+            <a class="topbar-wordmark" href="{{ url_for('admin_home_view') }}">MyAdvisor</a>
+            {% else %}
+            <a class="topbar-wordmark" href="{{ url_for('user_home_view') }}">MyAdvisor</a>
+            {% endif %}
             <div class="ms-auto profile-menu">
                 <span class="profile-icon" title="{{ user.username }}" aria-label="Signed in as {{ user.username }}">
                     <span class="material-symbols-outlined" aria-hidden="true">person</span>
@@ -180,6 +198,9 @@
     document.getElementById("menu-toggle").addEventListener("click", function () {
         document.getElementById("sidebar").classList.toggle("collapsed");
     });
+    setTimeout(() => {
+        document.querySelectorAll(".alert.alert-success, .alert.alert-warning, .alert.alert-danger").forEach((el) => el.remove());
+    }, 4000);
 </script>
 {% block subpage_scripts %}{% endblock %}
 {% endblock %}

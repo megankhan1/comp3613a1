@@ -120,7 +120,7 @@ erDiagram
 
 Phase 3 notes:
 
-- Students can pursue multiple degrees, including multiple majors and minors; `STUDENT_DEGREE.program_type` classifies each student-degree association.
+- Students can pursue multiple degrees, including majors, minors, and specials; `STUDENT_DEGREE.program_type` classifies each student-degree association as Major, Minor, or Special.
 - A course is selected by many students across many semesters through CourseSelection, which records the semester, enrollment status, and advisor review.
 - DegreeRequirement ties a degree to a course and records the rule that must be satisfied, such as a minimum grade or requirement type.
 - The relationship between Advisor and CourseSelection is review-based: an advisor may review many course selections, while each selection may be reviewed by one advisor.
@@ -186,13 +186,13 @@ The student screens show pending submission and approved/denied semester statuse
 
 ## Theming
 
-- **Colors:** deep navy, blue, teal, and white.
+- **Colors:** deep navy background, tech blue, teal, and white accents.
 - **Type:** sans serif (Manrope).
-- **Tone:** simple, clean, and modern; not a university portal.
-- **Logo / wordmark:** plain `MyAdvisor` text.
+- **Tone:** modern and techy; not a university portal.
+- **Logo / wordmark:** plain `MyAdvisor` text with a subtle tech glow.
 - **Applied to:** public landing, login, registration, and authenticated shell.
-- **Visual refinement:** removed the landing pattern and auth gradient, centered the landing hero, and restyled warning alerts in pale blue to avoid orange UI accents.
-- **Verification:** student approved the centered landing-page direction.
+- **Visual refinement:** deep navy background with blue/teal glows, dark surfaces for cards and forms, centered top-bar wordmark, warning alerts in pale blue to avoid orange UI accents.
+- **Verification:** student requested modern techy deep-navy retheme; follow-up polish made the semester 3-dot menu visible and restyled all popups for the dark theme. Student verified: overall look great, dots visible, popups clean — perfect. Replaced the tab icon with a sleek black square `MyA` SVG favicon. Made the centered top-bar `MyAdvisor` wordmark clickable back to Home (admin/student aware). Student verified: click goes home — yes.
 
 ## Implementation notes
 
@@ -201,7 +201,7 @@ One named workflow at a time. Include verify notes and polish / model revisions 
 - **Role provisioning:** public registration creates Student accounts; Admin/Advisor access remains seeded for testing and is not selectable during public registration.
 - **Advisor workflow decision:** the existing seeded `admin` login also acts as Advisor and links to one Advisor profile. Review actions apply to the semester's submitted courses as a group, following the advisor wireframe. A denial requires an explanation; the Advisor's notes are saved with the selections and shown to the student on the semester page.
 - **Advisor review implementation:** `/admin/advising` lists pending semester submissions grouped by student and semester with the submitted courses. The seeded `admin` account is linked to an Advisor profile. Approval may include optional notes; denial requires notes, and those notes appear beside denied courses in the student's semester plan. Student/Advisor workflow verification is pending.
-- **Workflow 1 refinement:** assigned Major/Minor degree cards appear on the student home page. Clicking a card opens a degree action page with `Track degree` and `Plan semester`. Tracking a degree opens `Completed courses` and `Remaining courses` actions. Students may record previously completed courses and add past semesters; a grade is not required. Completed courses shows code-only entries grouped by collapsible `Year 1`, `Year 2`, etc. sections and horizontal collapsible semester columns; clicking a code opens course details and a delete action that removes only the student's completion record. Every semester has an `Add course` dialog and a `Delete semester` action. Deleting a semester removes this student's completed entries and deletes the shared semester row only when no selections reference it. The `Add extra semester` dialog appears at the end of page content and asks for a `Year N` label and one of three semester radio choices; the label maps to a real calendar year for stored semester dates. Remaining courses shows the degree roadmap for `DEGREE.expected_years`, with three horizontal semester columns per year. Uncompleted `DEGREE_REQUIREMENT` rows appear in their expected term, separated into Core and specific Elective courses; Semester 3 is marked optional. Completed courses are removed from the roadmap. Course codes open an information dialog, and no add/delete controls appear on this page. Degree requirements without an expected term are outside the roadmap and should be assigned during curriculum setup. The authenticated sidebar stays viewport-height and sticky while long page content scrolls. Student verification of this refinement is pending.
+- **Workflow 1 refinement:** assigned Major/Minor/Special degree cards appear on the student home page. Clicking a card opens a degree action page with `Track degree` and `Plan semester`. Tracking a degree opens `Completed courses` and `Remaining courses` actions. Students may record previously completed courses and add past semesters; a grade is not required. Completed courses shows code-only entries grouped by collapsible `Year 1`, `Year 2`, etc. sections and horizontal collapsible semester columns; clicking a code opens course details and a delete action that removes only the student's completion record. Every semester has an `Add course` dialog and a `Delete semester` action. Deleting a semester removes this student's completed entries and deletes the shared semester row only when no selections reference it. The `Add extra semester` dialog appears at the end of page content and asks for a `Year N` label and one of three semester radio choices; the label maps to a real calendar year for stored semester dates. Remaining courses shows the degree roadmap for `DEGREE.expected_years`, with three horizontal semester columns per year. Uncompleted `DEGREE_REQUIREMENT` rows appear in their expected term, separated into Core and specific Elective courses; Semester 3 is marked optional. Completed courses are removed from the roadmap. Course codes open an information dialog, and no add/delete controls appear on this page. Degree requirements without an expected term are outside the roadmap and should be assigned during curriculum setup. The authenticated sidebar stays viewport-height and sticky while long page content scrolls. Student verification of this refinement is pending.
 - **Plan semester decisions:** registration collects the student's current year of study. The picker shows only three plain options (Semester 1, 2, and 3) for that registered academic year; existing profiles default to Year 1. Selecting an option opens a separate semester detail page with courses, Add course fields, and Submit for approval. While a semester is pending advisor review, students cannot add, edit, or remove courses; editing reopens after approval or denial. Re-submitting a course already in the same semester shows a warning toast that it is a duplicate.
 
 <!-- student-build:code-check
@@ -240,8 +240,77 @@ implement_confidence: 0.70
 passed: yes
 note: Student route loads planner data through SemesterPlanService using the signed-in user and degree ids.
 -->
+- **Plan semester polish:** Submit now stays visible for denied semesters and resubmits denied plus selected courses so students do not need delete-plus-add to bring it back; removed the per-course Pending badge so only the top `Pending advisor approval` shows. Student verified: submit reappears correctly, Pending only at top — perfect.
 - **Plan semester implementation:** enabled the degree action link and split planning into a picker with exactly three semester buttons for the student's registered current year and a separate selected-semester detail page. Course rows have a larger three-dot menu with Edit and Remove actions. The Add course button opens a modal with course fields. Course additions create shared catalog entries and student selections; duplicate attempts and pending locks show warning toasts. Submitting selected courses changes them to pending, and pending semesters hide editing/submission controls. Editing course details updates the shared `COURSE` catalog record; Remove deletes only this student's selection. Registration collects first/last name and current year; an additive schema migration defaults existing profiles to Year 1. Student verification of the picker-to-detail flow is pending.
 - **Remaining courses roadmap:** added `DEGREE.expected_years` and `DEGREE_REQUIREMENT.expected_year` / `expected_semester`. The Remaining page groups unmet course requirements into Core and Elective sections for each planned term, excludes courses with completed student selections, and labels the third semester optional. Existing databases receive additive defaults; sample seed data includes a three-year Computer Science roadmap and a two-year Mathematics roadmap.
+
+<!-- student-build:code-check
+workflow: Select degree and track progress
+form: choice
+layer: model
+architecture_ok: yes
+implement_confidence: 0.85
+passed: yes
+note: Student chose to constrain Special in SQLModel so Major/Minor/Special stay consistent.
+-->
+<!-- student-build:code-check
+workflow: Select degree and track progress
+form: snippet
+layer: model
+architecture_ok: yes
+implement_confidence: 0.65
+passed: partial
+note: Student first set program_type to a Literal alias; Guide corrected to str with pattern because Literal breaks SQLModel table mapping.
+-->
+<!-- student-build:code-check
+workflow: Select degree and track progress
+form: snippet
+layer: model
+architecture_ok: yes
+implement_confidence: 0.70
+passed: yes
+note: Corrected STUDENT_DEGREE.program_type to str with Major/Minor/Special pattern so Special validates without issubclass error.
+-->
+<!-- student-build:code-check
+workflow: Select degree and track progress
+form: snippet
+layer: router
+architecture_ok: yes
+implement_confidence: 0.85
+passed: yes
+note: Student completed thin degree_actions_view by constructing StudentDegreeService from the repository.
+-->
+- **Workflow 1 polish:** moved `MyAdvisor` from the sidebar into the centered top bar; removed the inner horizontal scrollbar on Completed courses so semester columns wrap and only page scroll remains, with single-column stacking on small screens; made `Delete semester` discrete with muted small text; added `Special` as a `STUDENT_DEGREE.program_type` alongside Major and Minor and updated degree-card copy; made semester cards equal height so adding a course no longer leaves uneven cards, with collapsed semesters shrinking to header size. Student verified: centered wordmark, no inner scroll, discrete delete, Special type, even cards with shrinking collapsed state — perfect.
+
+<!-- student-build:code-check
+workflow: Approve/deny courses for each semester
+form: mcq
+layer: service
+architecture_ok: yes
+implement_confidence: 0.80
+passed: yes
+note: Student chose Service for the deny-without-notes rejection.
+-->
+<!-- student-build:code-check
+workflow: Approve/deny courses for each semester
+form: snippet
+layer: model
+architecture_ok: yes
+implement_confidence: 0.75
+passed: yes
+note: Student kept COURSE_SELECTION.notes as the denial-explanation field.
+-->
+<!-- student-build:code-check
+workflow: Approve/deny courses for each semester
+form: snippet
+layer: router
+architecture_ok: yes
+implement_confidence: 0.80
+passed: yes
+note: Student kept advisor_decide_semester_action thin by constructing repository plus service and calling decide_semester.
+-->
+- **Advisor review verified:** `/admin/advising` groups pending semesters with submitted courses; denial requires notes and surfaces them to the student semester page. Student verified: approve works, deny without notes shows the error, deny with notes updates the student page — yes it works.
+- **Toast polish verified:** advisor `Semester approved / denied` alerts and all success toasts auto-dismiss after about four seconds; removed the student `Needs attention` warning popup so warnings no longer show as a toast box; removed per-course Approved/Denied/Pending badges so only the top semester status shows with one persistent advisor-feedback line above the course list. Student verified: toasts vanish, warning box gone, feedback stays above the list — yes.
 
 ## Deployed app
 

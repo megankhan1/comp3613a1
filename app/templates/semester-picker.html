@@ -42,7 +42,7 @@
     {% endfor %}
   </div>
 </div>
-{% if toast %}
+{% if toast and toast.variant != 'warning' %}
 <script>
   document.addEventListener("DOMContentLoaded", () => {
     const toastElement = document.getElementById("appToast");

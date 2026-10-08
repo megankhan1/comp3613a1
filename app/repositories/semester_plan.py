@@ -174,7 +174,7 @@ class SemesterPlanRepository:
             return "pending"
 
         editable_selections = [
-            selection for selection in selections if selection.status == "selected"
+            selection for selection in selections if selection.status in ("selected", "denied")
         ]
         if not editable_selections:
             return "empty"
