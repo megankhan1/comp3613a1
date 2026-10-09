@@ -193,6 +193,48 @@ async def submit_planned_semester_action(
 
 
 @router.post(
+    "/app/degrees/{degree_id}/plan/years/{academic_year_number}/semesters/{semester_number}/complete",
+    name="complete_planned_semester_action",
+)
+async def complete_planned_semester_action(
+    degree_id: int,
+    academic_year_number: int,
+    semester_number: int,
+    request: Request,
+    user: AuthDep,
+    db: SessionDep,
+):
+    student_degree_service = StudentDegreeService(StudentDegreeRepository(db))
+    if student_degree_service.get_degree_for_user(user.id, degree_id) is None:
+        raise HTTPException(status_code=404, detail="Degree not found")
+
+    plan_service = SemesterPlanService(SemesterPlanRepository(db))
+    result = plan_service.complete_semester_for_history(
+        user.id,
+        degree_id,
+        academic_year_number,
+        semester_number,
+    )
+    toast_messages = {
+        "completed": ("Semester marked as completed. See it under Track degree.", "success"),
+        "pending": ("This semester is pending approval. Complete it after review.", "warning"),
+        "empty": ("No planned or approved courses to complete.", "warning"),
+        "semester_missing": ("That semester could not be found.", "warning"),
+    }
+    message, variant = toast_messages.get(result, ("Could not complete this semester.", "warning"))
+    request.session["planner_toast"] = {"message": message, "variant": variant}
+    return RedirectResponse(
+        url=request.url_for(
+            "plan_semester_detail_view",
+            degree_id=degree_id,
+            academic_year_number=academic_year_number,
+            semester_number=semester_number,
+        ),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post(
     "/app/degrees/{degree_id}/plan/years/{academic_year_number}/semesters/{semester_number}/selections/{selection_id}/edit",
     name="edit_planned_course_action",
 )
@@ -226,6 +268,7 @@ async def edit_planned_course_action(
         "updated": ("Course updated.", "success"),
         "duplicate": ("This course is already in this semester.", "warning"),
         "pending": ("This semester is pending approval. Editing is locked.", "warning"),
+        "completed": ("This course is completed. Manage it under Track degree.", "warning"),
         "invalid_credits": ("Course credits must be greater than zero.", "warning"),
         "invalid_course": ("Enter a course code and course name.", "warning"),
         "selection_missing": ("Course selection not found.", "warning"),
@@ -268,6 +311,7 @@ async def delete_planned_course_action(
     messages = {
         "deleted": ("Course removed from this semester.", "success"),
         "pending": ("This semester is pending approval. Removing courses is locked.", "warning"),
+        "completed": ("This course is completed. Manage it under Track degree.", "warning"),
         "selection_missing": ("Course selection not found.", "warning"),
     }
     message, variant = messages.get(result, ("Could not remove this course.", "warning"))

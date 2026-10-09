@@ -70,7 +70,7 @@ dialog.plan-dialog::backdrop { background: rgba(2, 8, 18, 0.65); }
         <div><span class="plan-course-code">{{ course.course_code }}</span> <span>{{ course.course_name }}</span></div>
         {% if course.description %}<p class="plan-course-description mb-0">{{ course.description }}</p>{% endif %}
       </div>
-      {% if slot.can_edit %}
+      {% if slot.can_edit and selection.status != 'completed' %}
       <button class="plan-menu-trigger" type="button" data-dialog-open="course-menu-{{ selection.selection_id }}" title="Course options" aria-label="Options for {{ course.course_code }}">
         <span class="material-symbols-outlined">more_vert</span>
       </button>
@@ -140,6 +140,11 @@ dialog.plan-dialog::backdrop { background: rgba(2, 8, 18, 0.65); }
     {% if slot.has_editable_courses %}
     <form class="plan-actions" method="post" action="{{ url_for('submit_planned_semester_action', degree_id=degree.degree_id, academic_year_number=academic_year_number, semester_number=slot.semester_number) }}">
       <button class="btn btn-primary" type="submit">Submit</button>
+    </form>
+    {% endif %}
+    {% if slot.has_completable_courses %}
+    <form class="plan-actions" method="post" action="{{ url_for('complete_planned_semester_action', degree_id=degree.degree_id, academic_year_number=academic_year_number, semester_number=slot.semester_number) }}" onsubmit="return confirm('Mark this semester as completed? Its courses move to your completed history.')">
+      <button class="btn btn-outline-success" type="submit">Mark as completed</button>
     </form>
     {% endif %}
   {% endif %}

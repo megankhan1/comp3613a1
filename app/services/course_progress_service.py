@@ -156,9 +156,14 @@ class CourseProgressService:
 
         academic_year_number = int(match.group(1))
         completed = self.repository.get_completed_courses(user_id, degree_id)
-        calendar_years = sorted(
-            {semester.semester_year for _course, semester, _selection in completed}
+        calendar_years = {
+            semester.semester_year for _course, semester, _selection in completed
+        }
+        calendar_years.update(
+            semester.semester_year
+            for semester in self.repository.get_empty_semesters()
         )
+        calendar_years = sorted(calendar_years)
         if academic_year_number <= len(calendar_years):
             calendar_year = calendar_years[academic_year_number - 1]
         elif calendar_years:
@@ -180,13 +185,19 @@ class CourseProgressService:
             start_date,
             end_date,
         ):
-            return True
+            return "added"
         semester = self.repository.find_semester(calendar_year, semester_number)
-        if semester is not None and not self.repository.student_has_selections_in_semester(
+        if semester is None:
+            return "exists"
+        if self.repository.student_has_visible_completed(
+            user_id, semester.semester_id, degree_id
+        ):
+            return "exists"
+        if self.repository.student_has_selections_in_semester(
             user_id, semester.semester_id
         ):
-            return True
-        return False
+            return "in_use"
+        return "added"
 
     def delete_completed_course(self, user_id: int, selection_id: int) -> bool:
         return self.repository.delete_completed_course(user_id, selection_id)

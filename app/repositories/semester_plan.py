@@ -189,6 +189,49 @@ class SemesterPlanRepository:
             self.db.rollback()
             raise
 
+    def complete_semester(
+        self,
+        user_id: int,
+        semester_id: int,
+        degree_id: int,
+        expected_year: int,
+        expected_semester: int,
+    ) -> int:
+        selections = self.get_semester_selections(user_id, semester_id)
+        flippable = [
+            selection
+            for selection in selections
+            if selection.status in ("selected", "approved")
+        ]
+        if not flippable:
+            return 0
+        try:
+            for selection in flippable:
+                selection.status = "completed"
+                self.db.add(selection)
+                requirement = self.db.exec(
+                    select(DegreeRequirement).where(
+                        DegreeRequirement.degree_id == degree_id,
+                        DegreeRequirement.course_code == selection.course_code,
+                    )
+                ).first()
+                if requirement is None:
+                    self.db.add(
+                        DegreeRequirement(
+                            degree_id=degree_id,
+                            course_code=selection.course_code,
+                            requirement_type="Core",
+                            minimum_grade="C",
+                            expected_year=expected_year,
+                            expected_semester=expected_semester,
+                        )
+                    )
+            self.db.commit()
+            return len(flippable)
+        except Exception:
+            self.db.rollback()
+            raise
+
     def update_course_selection(
         self,
         user_id: int,
@@ -210,6 +253,8 @@ class SemesterPlanRepository:
             return "selection_missing"
         if selection.status == "pending":
             return "pending"
+        if selection.status == "completed":
+            return "completed"
 
         course = self.db.get(Course, selection.course_code)
         if course is None:
@@ -266,6 +311,8 @@ class SemesterPlanRepository:
             return "selection_missing"
         if selection.status == "pending":
             return "pending"
+        if selection.status == "completed":
+            return "completed"
         self.db.delete(selection)
         self.db.commit()
         return "deleted"

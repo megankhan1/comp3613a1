@@ -79,6 +79,10 @@ class SemesterPlanService:
                             selection.status in ("selected", "denied")
                             for _course, selection in courses
                         ),
+                        "has_completable_courses": any(
+                            selection.status in ("selected", "approved")
+                            for _course, selection in courses
+                        ),
                     }
                 )
             academic_years.append(
@@ -142,6 +146,32 @@ class SemesterPlanService:
         if slot["semester_id"] is None:
             return "empty"
         return self.repository.submit_semester_for_approval(user_id, slot["semester_id"])
+
+    def complete_semester_for_history(
+        self,
+        user_id: int,
+        degree_id: int,
+        academic_year_number: int,
+        semester_number: int,
+    ):
+        plan = self.get_plan_for_student(user_id, degree_id)
+        if plan is None:
+            return "degree_missing"
+        slot = self._get_slot(plan, academic_year_number, semester_number)
+        if slot is None or slot["semester_id"] is None:
+            return "semester_missing"
+        if not slot["can_edit"]:
+            return "pending"
+        flipped = self.repository.complete_semester(
+            user_id,
+            slot["semester_id"],
+            degree_id,
+            academic_year_number,
+            semester_number,
+        )
+        if not flipped:
+            return "empty"
+        return "completed"
 
     def update_course_selection(
         self,

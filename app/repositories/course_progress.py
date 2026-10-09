@@ -1,3 +1,4 @@
+from calendar import monthrange
 from datetime import date
 
 from sqlalchemy import or_
@@ -50,10 +51,13 @@ class CourseProgressRepository:
 
     def find_semester(self, calendar_year: int, semester_number: int):
         start_month = (semester_number - 1) * 4 + 1
+        end_month = start_month + 3
         return self.db.exec(
             select(Semester).where(
                 Semester.semester_year == calendar_year,
-                Semester.start_date == date(calendar_year, start_month, 1),
+                Semester.start_date >= date(calendar_year, start_month, 1),
+                Semester.start_date
+                <= date(calendar_year, end_month, monthrange(calendar_year, end_month)[1]),
             )
         ).first()
 
@@ -64,6 +68,26 @@ class CourseProgressRepository:
             .where(
                 Student.user_id == user_id,
                 CourseSelection.semester_id == semester_id,
+            )
+        )
+        return self.db.exec(statement).first() is not None
+
+    def student_has_visible_completed(
+        self, user_id: int, semester_id: int, degree_id: int
+    ) -> bool:
+        statement = (
+            select(CourseSelection.selection_id)
+            .join(Student, Student.student_id == CourseSelection.student_id)
+            .join(Course, Course.course_code == CourseSelection.course_code)
+            .join(
+                DegreeRequirement,
+                DegreeRequirement.course_code == Course.course_code,
+            )
+            .where(
+                Student.user_id == user_id,
+                CourseSelection.semester_id == semester_id,
+                DegreeRequirement.degree_id == degree_id,
+                CourseSelection.status == "completed",
             )
         )
         return self.db.exec(statement).first() is not None

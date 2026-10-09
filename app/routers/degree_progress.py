@@ -107,14 +107,20 @@ async def add_completed_semester_action(
     _degree_services(db, user.id, degree_id)
     course_progress_service = CourseProgressService(CourseProgressRepository(db))
     try:
-        added = course_progress_service.add_academic_semester(
+        result = course_progress_service.add_academic_semester(
             user.id,
             academic_year_label,
             semester_number,
             degree_id,
         )
-        if added:
+        if result == "added":
             flash(request, "Semester added.")
+        elif result == "in_use":
+            flash(
+                request,
+                "That semester is already in use — manage its courses under Plan.",
+                "warning",
+            )
         else:
             flash(request, "That semester already exists.", "warning")
     except (ValueError, OverflowError) as exc:
