@@ -241,6 +241,11 @@ def cmd_seed(args: argparse.Namespace) -> None:
                     )
                     session.add(course)
                     session.flush()
+                else:
+                    course.course_name = name
+                    course.description = description
+                    course.credits = credits
+                    session.add(course)
 
                 requirement = session.exec(
                     select(DegreeRequirement).where(
