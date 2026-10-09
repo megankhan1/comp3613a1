@@ -603,7 +603,55 @@ def cmd_seed(args: argparse.Namespace) -> None:
             for degree in relocated:
                 degree.faculty_name = "Faculty of Science and Technology"
                 session.add(degree)
+            math_roadmap = [
+                ("MATH3273", "Linear Algebra II", "Covers vectors, matrices, linear transformations, eigenvalues, and advanced linear algebra concepts.", "Core", 1, 1),
+                ("MATH3277", "Introduction to Real Analysis II", "An introduction to the theory of real numbers and functions of a real variable.", "Core", 1, 2),
+                ("MATH3278", "Probability Theory II", "Covers advanced probability concepts, distributions, random variables, and statistical methods.", "Elective", 2, 1),
+                ("MATH2210", "Probability and Statistics", "Probability models and statistical methods.", "Core", 2, 2),
+            ]
+            wanted_codes = {code for code, *_ in math_roadmap}
+            for requirement in session.exec(
+                select(DegreeRequirement).where(
+                    DegreeRequirement.degree_id == minor.degree_id
+                )
+            ).all():
+                if requirement.course_code not in wanted_codes:
+                    session.delete(requirement)
+            for code, name, description, requirement_type, expected_year, expected_semester in math_roadmap:
+                course = session.get(Course, code)
+                if course is None:
+                    course = Course(
+                        course_code=code,
+                        course_name=name,
+                        description=description,
+                        credits=3,
+                    )
+                    session.add(course)
+                    session.flush()
+                requirement = session.exec(
+                    select(DegreeRequirement).where(
+                        DegreeRequirement.degree_id == minor.degree_id,
+                        DegreeRequirement.course_code == code,
+                    )
+                ).first()
+                if requirement is None:
+                    session.add(
+                        DegreeRequirement(
+                            degree_id=minor.degree_id,
+                            course_code=code,
+                            requirement_type=requirement_type,
+                            minimum_grade="C",
+                            expected_year=expected_year,
+                            expected_semester=expected_semester,
+                        )
+                    )
+                else:
+                    requirement.requirement_type = requirement_type
+                    requirement.expected_year = expected_year
+                    requirement.expected_semester = expected_semester
+                    session.add(requirement)
             session.commit()
+            print("  seed remaining courses for BSc Mathematics")
             if relocated:
                 print(f"  move {len(relocated)} degree(s) to Faculty of Science and Technology")
             print("  ensure sample degree requirements, completed history, and one pending review for bob")
