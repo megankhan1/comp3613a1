@@ -56,11 +56,11 @@ dialog.plan-dialog::backdrop { background: rgba(2, 8, 18, 0.65); }
   {% if slot.courses %}
   {% set feedback_ns = namespace(text=None) %}
   {% for course, selection in slot.courses %}
-    {% if selection.status == 'denied' and selection.notes and not feedback_ns.text %}
+    {% if selection.status in ['approved', 'denied'] and selection.notes and not feedback_ns.text %}
       {% set feedback_ns.text = selection.notes %}
     {% endif %}
   {% endfor %}
-  {% if slot.status == 'denied' and feedback_ns.text %}
+  {% if slot.status in ['approved', 'denied'] and feedback_ns.text %}
   <p class="advisor-feedback small mt-0 mb-3">Advisor feedback: {{ feedback_ns.text }}</p>
   {% endif %}
   <div class="plan-course-list">

@@ -324,7 +324,7 @@ note: Student kept advisor_decide_semester_action thin by constructing repositor
 -->
 - **Advisor review verified:** `/admin/advising` groups pending semesters with submitted courses; denial requires notes and surfaces them to the student semester page. Student verified: approve works, deny without notes shows the error, deny with notes updates the student page — yes it works.
 - **Advisor dedup:** students with two degrees now appear for approval under one degree only (their Major, else first assigned), since plan semesters are shared across degrees; the decision still shows on the student's side under each degree. Student verified: single listing, visible under both degrees — good.
-- **Toast polish verified:** advisor `Semester approved / denied` alerts and all success toasts auto-dismiss after about four seconds; removed the student `Needs attention` warning popup so warnings no longer show as a toast box; removed per-course Approved/Denied/Pending badges so only the top semester status shows with one persistent advisor-feedback line above the course list. Student verified: toasts vanish, warning box gone, feedback stays above the list — yes.
+- **Toast polish verified:** advisor `Semester approved / denied` alerts and all success toasts auto-dismiss after about four seconds; removed the student `Needs attention` warning popup so warnings no longer show as a toast box; removed per-course Approved/Denied/Pending badges so only the top semester status shows with one persistent advisor-feedback line above the course list (shown for approved semesters too, not just denied). Student verified: toasts vanish, warning box gone, feedback stays above the list — yes. Student verification of approved-notes display pending.
 
 ## Deployed app
 
