@@ -228,11 +228,15 @@ def export_report(
             "(runs student-judge -> docs/judge.md), then re-run this command."
         )
     app_url, logins, missing = _marker_access(markdown)
+    github, youtube, agents = _cover_extras(markdown)
     dest.parent.mkdir(parents=True, exist_ok=True)
 
     pdf = _new_pdf(bool(missing))
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
-        cover = _cover_html(clean_name, clean_id, app_url, logins, integrity, missing)
+        cover = _cover_html(
+            clean_name, clean_id, app_url, logins, integrity, missing,
+            github, youtube, agents,
+        )
         body = _markdown_to_html(markdown, src.parent, Path(tmp))
         appendix = _markdown_to_html(
             appendix_markdown(transcripts),
@@ -577,6 +581,23 @@ def _write_report_html(pdf: ReportPDF, markup: str) -> None:
     )
 
 
+def _cover_extras(markdown: str) -> tuple[str, str, str]:
+    github_section = _section(markdown, "github", "github repo", "repository")
+    github_urls = re.findall(r"https?://[^\s)]+", github_section)
+    github = next((url for url in github_urls if "github.com" in url), "")
+    youtube_section = _section(markdown, "youtube url", "youtube", "video")
+    youtube_urls = re.findall(r"https?://[^\s)]+", youtube_section)
+    youtube = next((url for url in youtube_urls), "")
+    agents_section = _section(markdown, "agents used", "agents", "agent used")
+    agent_lines = []
+    for line in agents_section.splitlines():
+        cleaned = re.sub(r"^[-*]\s+", "", line.strip())
+        if cleaned:
+            agent_lines.append(cleaned)
+    agents = "; ".join(agent_lines)
+    return github or "Not yet", youtube or "Not yet", agents or "Not yet"
+
+
 def _cover_html(
     name: str,
     student_id: str,
@@ -584,6 +605,9 @@ def _cover_html(
     logins: str,
     integrity: IntegrityResult,
     missing: list[str],
+    github: str = "Not yet",
+    youtube: str = "Not yet",
+    agents: str = "Not yet",
 ) -> str:
     login_html = " · ".join(
         html_lib.escape(line.strip()) for line in logins.splitlines() if line.strip()
@@ -597,6 +621,9 @@ def _cover_html(
         ("Student ID", html_lib.escape(student_id), False),
         ("Deployed app", html_lib.escape(app_url), False),
         ("Logins", login_html, False),
+        ("GitHub", html_lib.escape(github), False),
+        ("YouTube", html_lib.escape(youtube), False),
+        ("Agents used", html_lib.escape(agents), False),
         ("Skill integrity", integrity_value, not integrity.ok),
     ]
     cells = []
